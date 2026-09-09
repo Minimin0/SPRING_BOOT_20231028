@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<title>Hello2 페이지</title>
+</head>
+<body>
+<h1>두번째 헬로 페이지</h1>
+<!--/* 컨트롤러에서 전달한 5개의 속성을 출력한다. */-->
+<ul>
+    <li>학과 : <span th:text="${dept}"></span></li>
+    <li>학번 : <span th:text="${studentId}"></span></li>
+    <li>이름 : <span th:text="${name}"></span></li>
+    <li>과목 : <span th:text="${subject}"></span></li>
+    <li>주차 : <span th:text="${week}"></span></li>
+</ul>
+<a href="/hello">이전 페이지</a><br>
+<a href="/">홈페이지 메인</a>
+</body>
+</html>

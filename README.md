@@ -164,6 +164,14 @@ src/
 
 강의 자료의 핵심은 포트폴리오 화면을 스프링 부트 프로젝트 안에 넣고, 웹/AI/보안/앱 같은 기술 영역별 상세 페이지를 구성하는 것이다. 메인 페이지의 각 기술 카드에서 상세 페이지가 새 창으로 열리도록 `target="_blank"`와 `rel="noopener noreferrer"`를 함께 사용했다.
 
+### 실습 결과
+
+메인 포트폴리오에서 TemplateMo 원본 레이아웃이 적용되고, 기술 카드의 웹 상세 페이지도 정상적으로 열린다.
+
+| 메인 포트폴리오 | 웹 상세 페이지 |
+|---|---|
+| ![3주차 메인 포트폴리오 실행 결과](docs/images/week3-main.png) | ![3주차 웹 상세 페이지 실행 결과](docs/images/week3-detailed-web.png) |
+
 ## 성능 확인 - 원인 분석
 
 Lighthouse 보고서를 PC와 모바일 조건으로 각각 생성했다. 결과 파일은 `docs/lighthouse/desktop.json`, `docs/lighthouse/mobile.json`에 저장했다.

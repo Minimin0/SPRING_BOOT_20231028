@@ -358,7 +358,7 @@ strong {
   color: var(--white-color);
 }
 
-.navbar-expand-lg .navbar-nav .nav-link {
+.navbar-expand-xxl .navbar-nav .nav-link {
   padding-right: 0;
   padding-left: 0;
   margin-right: 20px;
@@ -1068,7 +1068,7 @@ strong {
     background: var(--dark-color);
   }
 
-  .navbar-expand-lg .navbar-nav .nav-link {
+  .navbar-expand-xxl .navbar-nav .nav-link {
     margin-left: 0;
   }
 

@@ -37,3 +37,6 @@ _workspace/
 
 ### macOS ###
 .DS_Store
+
+# 로컬 DB 계정과 보안 키
+/src/main/resources/application-secret.properties

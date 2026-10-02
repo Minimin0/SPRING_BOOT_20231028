@@ -189,3 +189,97 @@ Lighthouse 보고서를 PC와 모바일 조건으로 각각 생성했다. 결과
 2. **사용하지 않는 JavaScript** - Bootstrap JS와 jQuery를 원본 템플릿 그대로 불러오지만 첫 화면에서 전부 필요하지는 않다. 모바일 기준 약 85KB 절감 가능으로 표시됐다.
 
 추가로 favicon 404 오류를 없애고, 프로필 이미지를 압축해서 모바일 LCP를 줄였다. 다만 원본 TemplateMo 모양을 유지해야 하므로 CSS/JS를 잘라내는 최적화는 이번 과제 범위에서는 적용하지 않았다.
+
+---
+
+# 자바웹프로그래밍(2) 4주차 - 데이터베이스 연동 및 테스트
+
+MySQL과 Spring Data JPA를 연결하고 프로젝트를 Controller, Service, Repository, Domain 계층으로 나눴다. `testdb` 테이블을 엔티티로 만들고 데이터 전체 조회까지 구현한 뒤, 연습문제의 나이와 성별 컬럼도 추가해서 화면에 출력했다.
+
+20231028 최민
+
+## 개발 환경
+
+| 항목 | 내용 |
+|---|---|
+| Spring Boot | 4.1.1 |
+| Java | 21 (LTS) |
+| 데이터베이스 | MySQL 8.0.46 |
+| ORM | Spring Data JPA, Hibernate |
+| 커넥션 풀 | HikariCP |
+| 템플릿 엔진 | Thymeleaf |
+
+`pom.xml`에서 2주차에 주석 처리했던 Spring Data JPA와 MySQL Connector/J 의존성을 활성화했다. MySQL에는 `spring` 데이터베이스를 만들었고, `application.properties`에 JDBC 주소와 JPA 설정을 추가했다. 비밀번호는 GitHub에 올라가지 않도록 `DB_PASSWORD` 환경변수로 받는다.
+
+## 폴더 구조
+
+```
+src/main/
+ ├ java/com/example/demo/
+ │  ├ DemoApplication.java
+ │  ├ controller/
+ │  │  └ DemoController.java       # 요청 처리와 Model 전달
+ │  └ model/
+ │     ├ domain/
+ │     │  └ TestDB.java            # testdb 테이블과 연결되는 엔티티
+ │     ├ repository/
+ │     │  └ TestRepository.java    # JpaRepository 기반 DB 접근
+ │     └ service/
+ │        └ TestService.java       # 사용자 조회 로직
+ └ resources/
+    ├ templates/
+    │  └ testdb.html               # 사용자 목록 화면
+    └ application.properties       # MySQL/JPA 연결 설정
+docs/
+ └ sql/
+    └ week4-users.sql              # 실습용 사용자 INSERT 문
+```
+
+기존 `DemoController.java`는 `controller` 패키지로 옮겼다. 화면 파일은 기존처럼 `templates`에 두고, 데이터 구조는 `domain`, DB 접근은 `repository`, 중간 처리는 `service`로 분리했다.
+
+## 데이터베이스 설정 및 실행 방법
+
+MySQL에서 데이터베이스를 먼저 만든다.
+
+```sql
+CREATE DATABASE spring;
+FLUSH PRIVILEGES;
+```
+
+애플리케이션을 한 번 실행하면 `spring.jpa.hibernate.ddl-auto=update` 설정에 따라 `testdb` 테이블이 자동 생성된다. 그다음 실습 데이터를 입력한다.
+
+```bash
+mysql -u root -p spring < docs/sql/week4-users.sql
+```
+
+비밀번호를 환경변수로 전달해서 스프링 부트를 실행한다.
+
+```bash
+DB_PASSWORD='본인 MySQL 비밀번호' ./mvnw spring-boot:run
+```
+
+접속 주소는 <http://localhost:8080/testdb>이다.
+
+## 실습하면서 정리한 것
+
+**JPA와 엔티티** - `@Entity`가 붙은 `TestDB` 클래스를 JPA가 관리하고, `@Table(name = "testdb")`로 MySQL 테이블과 연결한다. `id`는 기본키이며 `GenerationType.IDENTITY`를 사용해 MySQL이 값을 자동 증가시킨다.
+
+**Repository** - `TestRepository`가 `JpaRepository<TestDB, Long>`을 상속하므로 SQL을 직접 작성하지 않아도 `findAll()`, `findById()`, `save()`, `delete()` 같은 기본 메서드를 사용할 수 있다. 이름 한 명을 찾는 `findByName()`은 메서드 이름을 바탕으로 JPA가 쿼리를 만든다.
+
+**Service와 의존성 주입** - `TestService`에서 Repository를 주입받아 이름 조회와 전체 조회를 처리한다. 생성자 주입을 사용해서 필요한 의존성이 빠지지 않도록 했다.
+
+**Controller와 Thymeleaf** - `/testdb` 요청이 들어오면 Service의 `findAll()` 결과를 `users`라는 이름으로 Model에 담는다. `testdb.html`은 `th:each`로 목록을 반복하면서 아이디, 이름, 나이, 성별을 표로 출력한다.
+
+**연결 확인** - 실행 로그에서 `HikariPool-1 - Start completed`와 MySQL 8.0.46 연결 정보를 확인했다. Hibernate가 `testdb` 테이블을 자동 생성했고 `./mvnw test`도 정상 통과했다.
+
+## 연습문제
+
+기존 엔티티에는 `name`만 있었지만 연습문제에 맞춰 `age`와 `gender` 필드를 추가했다. Hibernate가 두 컬럼을 테이블에 반영한 뒤 `week4-users.sql`의 INSERT 문으로 사용자 4명을 저장했다.
+
+최민의 정보는 이름 `최민`, 나이 `23`, 성별 `남자`로 입력했다. Thymeleaf 표에도 두 컬럼을 추가해서 모든 사용자 정보가 한 화면에 출력되도록 했다.
+
+### 실습 결과
+
+`/testdb`에서 MySQL에 저장된 사용자 네 명의 아이디, 이름, 나이, 성별이 모두 표시된다.
+
+![4주차 데이터베이스 연동 및 연습문제 실행 결과](docs/images/week4-testdb.png)

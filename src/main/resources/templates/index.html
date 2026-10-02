@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -35,6 +35,44 @@
                 transform: translateX(-50%);
                 width: 360px;
             }
+
+            .mobile-auth-btn {
+                align-items: center;
+                display: inline-flex;
+                height: 44px;
+                justify-content: center;
+                padding: 0 !important;
+                width: 44px;
+            }
+
+            @media screen and (max-width: 575px) {
+                .hero-title-wrap {
+                    align-items: flex-start !important;
+                }
+
+                .hero-title-wrap .avatar-image-large {
+                    flex: 0 0 64px;
+                    height: 64px;
+                    width: 64px;
+                }
+
+                .hero-title-wrap .hero-title {
+                    font-size: 30px;
+                    line-height: 1.25;
+                    min-width: 0;
+                    padding: 8px 16px;
+                }
+
+                .hero h2 {
+                    font-size: 28px;
+                    line-height: 1.25;
+                }
+
+                .hero-image.profile-hero {
+                    height: 280px;
+                    width: 280px;
+                }
+            }
         </style>
         
 <!--
@@ -54,24 +92,28 @@ https://templatemo.com/tm-578-first-portfolio
             </div>
         </section>
 
-        <nav class="navbar navbar-expand-lg">
+        <nav class="navbar navbar-expand-xxl">
             <div class="container">
 
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
 
-                <a th:href="@{/}" class="navbar-brand mx-auto mx-lg-0">최민</a>
+                <a th:href="@{/}" class="navbar-brand mx-auto mx-xxl-0">최민</a>
 
-                <div class="d-flex align-items-center d-lg-none">
-                    <i class="navbar-icon bi-telephone-plus me-3"></i>
-                    <a class="custom-btn btn" href="#section_5">
-                        Contact
+                <div class="d-flex align-items-center d-xxl-none">
+                    <a sec:authorize="isAnonymous()" class="custom-btn btn mobile-auth-btn" th:href="@{/login}" aria-label="로그인" title="로그인">
+                        <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
                     </a>
+                    <form sec:authorize="isAuthenticated()" th:action="@{/logout}" method="post" class="mb-0">
+                        <button class="custom-btn btn mobile-auth-btn" type="submit" aria-label="로그아웃" title="로그아웃">
+                            <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+                        </button>
+                    </form>
                 </div>
 
                 <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav ms-lg-5">
+                    <ul class="navbar-nav ms-xxl-4">
                         <li class="nav-item">
                             <a class="nav-link click-scroll" href="#section_1">홈페이지</a>
                         </li>
@@ -91,13 +133,20 @@ https://templatemo.com/tm-578-first-portfolio
                         <li class="nav-item">
                             <a class="nav-link click-scroll" href="#section_5">연락처</a>
                         </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link" th:href="@{/testdb}">회원목록</a>
+                        </li>
                     </ul>
 
-                    <div class="d-lg-flex align-items-center d-none ms-auto">
-                        <i class="navbar-icon bi-telephone-plus me-3"></i>
-                        <a class="custom-btn btn" href="#section_5">
-                            Contact
-                        </a>
+                    <div class="d-xxl-flex align-items-center d-none ms-auto gap-2">
+                        <a sec:authorize="isAnonymous()" class="custom-btn btn" th:href="@{/login}">로그인</a>
+                        <div sec:authorize="isAuthenticated()" class="d-flex align-items-center gap-2">
+                            <span class="text-white"><strong sec:authentication="name"></strong>님</span>
+                            <form th:action="@{/logout}" method="post" class="mb-0">
+                                <button class="custom-btn btn" type="submit">로그아웃</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
 

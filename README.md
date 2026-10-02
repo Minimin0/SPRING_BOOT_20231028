@@ -283,3 +283,118 @@ DB_PASSWORD='본인 MySQL 비밀번호' ./mvnw spring-boot:run
 `/testdb`에서 MySQL에 저장된 사용자 네 명의 아이디, 이름, 나이, 성별이 모두 표시된다.
 
 ![4주차 데이터베이스 연동 및 연습문제 실행 결과](docs/images/week4-testdb.png)
+
+---
+
+# 자바웹프로그래밍(2) 5주차 - 로그인, 로그아웃 및 암호화
+
+Spring Security를 추가해 세션 기반 로그인과 로그아웃을 구현하고, 회원가입 비밀번호를 BCrypt 해시로 저장했다. 로그인하지 않은 사용자는 회원목록에 접근할 수 없으며, 연습문제의 7일 로그인 상태 유지와 비밀번호 확인 검증까지 적용했다.
+
+20231028 최민
+
+## 개발 환경
+
+| 항목 | 내용 |
+|---|---|
+| Spring Boot | 4.1.1 |
+| Java | 21 (LTS) |
+| Spring Security | 7.1.1 |
+| 데이터베이스 | MySQL 8.0.46 |
+| 암호화 | BCryptPasswordEncoder |
+| 화면 | Thymeleaf, Thymeleaf Spring Security Extras |
+
+`pom.xml`에 Spring Security와 Thymeleaf Security Extras를 추가했다. 로그인 정보는 서버 세션에 저장되고 브라우저는 `JSESSIONID` 쿠키로 세션을 구분한다. 로그인 상태 유지를 선택하면 유효기간이 7일인 `remember-me` 쿠키도 발급된다.
+
+## 추가한 구조
+
+```
+src/main/
+ ├ java/com/example/demo/
+ │  ├ config/
+ │  │  └ SecurityConfig.java       # URL 권한, 로그인, 로그아웃, remember-me
+ │  ├ controller/
+ │  │  └ MemberController.java     # 로그인·회원가입 화면과 가입 처리
+ │  └ model/
+ │     ├ domain/
+ │     │  └ Member.java            # member 테이블 엔티티
+ │     ├ dto/
+ │     │  └ MemberForm.java        # 회원가입 입력값
+ │     ├ repository/
+ │     │  └ MemberRepository.java  # 아이디 조회와 중복 확인
+ │     └ service/
+ │        └ MemberService.java      # 입력 검증, BCrypt 암호화, 로그인 조회
+ └ resources/
+    ├ static/css/auth.css           # 로그인·회원가입 공통 스타일
+    ├ templates/login.html          # 로그인 화면
+    ├ templates/signup.html         # 회원가입 화면
+    └ application-secret.properties # DB 비밀번호와 보안 키, Git 제외
+```
+
+`Member` 엔티티와 화면 입력용 `MemberForm` DTO를 분리했다. 화면에는 `role` 필드가 없고 서버가 항상 `USER`로 저장하므로 사용자가 가입 요청에서 관리자 권한을 임의로 보낼 수 없다.
+
+## 보안 설정
+
+`SecurityConfig`에서 메인, 로그인, 회원가입, 상세 페이지와 정적 파일은 누구나 접근할 수 있게 했다. `/testdb`를 포함한 나머지 주소는 인증된 사용자만 접근할 수 있다.
+
+- 로그인 성공: 메인 화면으로 이동
+- 로그인 실패: `/login?error`
+- 로그아웃: CSRF 보호가 적용되는 `POST /logout`
+- 로그아웃 성공: `/login?logout`
+- remember-me: 7일 유지
+- 비밀번호: BCrypt 단방향 해시 저장
+
+메인 네비게이션은 로그인 전에는 로그인 버튼을, 로그인 후에는 `아이디님`과 로그아웃 버튼을 보여준다. 메뉴가 20px인 상태에서도 잘리지 않도록 1400px 미만 화면에서는 햄버거 메뉴로 전환되게 했다.
+
+## 비밀 설정 및 실행 방법
+
+`src/main/resources/application-secret.properties`는 `.gitignore`에 등록되어 GitHub에 올라가지 않는다. 처음 실행할 때 아래 형식으로 직접 만든다.
+
+```properties
+spring.datasource.username=root
+spring.datasource.password=본인_MySQL_비밀번호
+app.security.remember-me-key=충분히_긴_임의의_문자열
+```
+
+그다음 스프링 부트를 실행한다.
+
+```bash
+./mvnw spring-boot:run
+```
+
+접속 주소는 다음과 같다.
+
+- <http://localhost:8080/login> 로그인
+- <http://localhost:8080/signup> 회원가입
+- <http://localhost:8080/testdb> 로그인 후 접근 가능한 회원목록
+
+## 실습하면서 정리한 것
+
+**SecurityFilterChain** - 요청이 컨트롤러에 도착하기 전에 보안 필터가 인증 여부와 접근 권한을 확인한다. 허용하지 않은 페이지를 비로그인 상태로 요청하면 직접 만든 `/login` 화면으로 이동한다.
+
+**회원가입과 DTO** - `MemberForm`에는 아이디, 이름, 비밀번호, 비밀번호 확인만 있다. DB 전용 필드인 기본키와 권한은 화면에서 받지 않고 서버가 관리한다.
+
+**BCrypt 암호화** - 회원가입 때 `PasswordEncoder.encode()`로 비밀번호를 암호화한다. 테스트 계정의 DB 값을 확인한 결과 `$2a$`로 시작하는 60자 해시였고 입력한 평문과 달랐다. 로그인할 때는 Spring Security가 `matches()`로 자동 비교한다.
+
+**UserDetailsService** - `MemberService`가 `UserDetailsService`를 구현해 아이디로 회원을 찾는다. 사용자가 없으면 `UsernameNotFoundException`을 발생시키고, 회원이 있으면 암호화된 비밀번호와 `USER` 권한을 Security 사용자 객체로 변환한다.
+
+**CSRF와 로그아웃** - 로그인, 회원가입, 로그아웃 폼에 `th:action`을 사용해 CSRF 토큰이 자동으로 들어간다. 로그아웃은 GET 링크가 아니라 POST 폼으로 처리하고 세션과 인증 쿠키를 삭제한다.
+
+## 연습문제
+
+### 로그인 상태 유지
+
+로그인 화면에 `remember-me` 체크박스를 연결하고 `SecurityConfig`의 유효기간을 `7 * 24 * 60 * 60`초로 설정했다. 실제 로그인 응답에서 `remember-me` 쿠키의 `Max-Age=604800`, `HttpOnly` 속성을 확인했다. 보안 키는 공개 설정에 넣지 않고 Git에서 제외된 secret 파일로 분리했다.
+
+### 비밀번호 확인 검증
+
+`MemberService.signup()`에서 비밀번호와 비밀번호 확인 값을 비교한다. 다르면 `비밀번호가 일치하지 않습니다.`를 화면에 출력하고 Repository의 `save()`를 호출하지 않는다. 빈 값, 6자 미만 비밀번호, 50자를 넘는 아이디와 이름도 서버에서 거부한다.
+
+자동 테스트로 불일치 비밀번호가 저장되지 않는 경우와 정상 비밀번호가 BCrypt 해시로 바뀌는 경우를 확인했다. 전체 `./mvnw test` 결과는 3개 테스트 모두 성공이다.
+
+### 실습 결과
+
+기존 포트폴리오의 프로필 이미지와 색상을 사용해 로그인과 회원가입 화면을 구성했다. 브라우저에서 가입 실패, 정상 가입, 로그인, 회원목록 접근, 로그아웃, 로그아웃 후 접근 차단까지 순서대로 확인했다.
+
+| 로그인 화면 | 회원가입 화면 |
+|---|---|
+| ![5주차 로그인 화면](docs/images/week5-login.png) | ![5주차 회원가입 화면](docs/images/week5-signup.png) |

@@ -12,12 +12,15 @@ import com.example.demo.model.domain.Member;
 import com.example.demo.model.dto.MemberForm;
 import com.example.demo.model.repository.MemberRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @ExtendWith(MockitoExtension.class)
 class MemberServiceTests {
@@ -32,6 +35,11 @@ class MemberServiceTests {
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder();
         memberService = new MemberService(memberRepository, passwordEncoder);
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -55,7 +63,38 @@ class MemberServiceTests {
         Member member = memberService.signup(form);
 
         assertTrue(passwordEncoder.matches("123123", member.getPassword()));
-        assertEquals("USER", member.getRole());
+        assertEquals(Member.ROLE_USER, member.getRole());
+    }
+
+    @Test
+    void changesAnotherMemberRoleToManager() {
+        Member member = member("20231028", Member.ROLE_USER);
+        when(memberRepository.findById(1L)).thenReturn(java.util.Optional.of(member));
+
+        memberService.changeRole(1L, Member.ROLE_MANAGER);
+
+        assertEquals(Member.ROLE_MANAGER, member.getRole());
+        verify(memberRepository).save(member);
+    }
+
+    @Test
+    void rejectsChangingOrDeletingCurrentAdministrator() {
+        Member admin = member("admin", Member.ROLE_ADMIN);
+        when(memberRepository.findById(2L)).thenReturn(java.util.Optional.of(admin));
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("admin", "password"));
+
+        IllegalArgumentException error = assertThrows(
+                IllegalArgumentException.class,
+                () -> memberService.changeRole(2L, Member.ROLE_USER));
+        IllegalArgumentException deleteError = assertThrows(
+                IllegalArgumentException.class,
+                () -> memberService.deleteMember(2L));
+
+        assertEquals("자기 자신의 권한 변경·삭제는 할 수 없습니다.", error.getMessage());
+        assertEquals("자기 자신의 권한 변경·삭제는 할 수 없습니다.", deleteError.getMessage());
+        verify(memberRepository, never()).save(any());
+        verify(memberRepository, never()).delete(any());
     }
 
     private MemberForm memberForm(String username, String password, String passwordConfirm) {
@@ -65,5 +104,12 @@ class MemberServiceTests {
         form.setPassword(password);
         form.setPasswordConfirm(passwordConfirm);
         return form;
+    }
+
+    private Member member(String username, String role) {
+        Member member = new Member();
+        member.setUsername(username);
+        member.setRole(role);
+        return member;
     }
 }

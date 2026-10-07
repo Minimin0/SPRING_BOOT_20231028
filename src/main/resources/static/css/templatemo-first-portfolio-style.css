@@ -332,6 +332,42 @@ strong {
   color: var(--white-color);
 }
 
+.role-badge {
+  background: var(--secondary-color);
+  border-radius: 20px;
+  color: var(--white-color);
+  font-size: 12px;
+  font-weight: var(--font-weight-bold);
+  padding: 4px 10px;
+  vertical-align: middle;
+}
+
+.navbar .role-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+.role-ADMIN {
+  background: #e05260;
+}
+
+.role-MANAGER {
+  background: #f0a030;
+}
+
+.role-USER {
+  background: var(--secondary-color);
+}
+
+.navbar .nav-link.nav-link-admin {
+  color: #e05260;
+}
+
+.navbar-nav .nav-link,
+.navbar .custom-btn {
+  white-space: nowrap;
+}
+
 .navbar {
   background: transparent;
   position: absolute;

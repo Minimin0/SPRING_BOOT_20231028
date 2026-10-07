@@ -355,6 +355,8 @@ spring.datasource.password=본인_MySQL_비밀번호
 app.security.remember-me-key=충분히_긴_임의의_문자열
 ```
 
+포트, DB 주소, 로그인 유지 기간은 필요할 때 `SERVER_PORT`, `DB_URL`, `REMEMBER_ME_DURATION` 환경변수로 변경할 수 있다. 기본값은 각각 `8080`, 로컬 `spring` 데이터베이스, `7d`이다.
+
 그다음 스프링 부트를 실행한다.
 
 ```bash
@@ -383,7 +385,7 @@ app.security.remember-me-key=충분히_긴_임의의_문자열
 
 ### 로그인 상태 유지
 
-로그인 화면에 `remember-me` 체크박스를 연결하고 `SecurityConfig`의 유효기간을 `7 * 24 * 60 * 60`초로 설정했다. 실제 로그인 응답에서 `remember-me` 쿠키의 `Max-Age=604800`, `HttpOnly` 속성을 확인했다. 보안 키는 공개 설정에 넣지 않고 Git에서 제외된 secret 파일로 분리했다.
+로그인 화면에 `remember-me` 체크박스를 연결하고 `app.security.remember-me-duration=7d`로 유효기간을 설정했다. 실제 로그인 응답에서 `remember-me` 쿠키의 `Max-Age=604800`, `HttpOnly` 속성을 확인했다. 보안 키는 공개 설정에 넣지 않고 Git에서 제외된 secret 파일로 분리했다.
 
 ### 비밀번호 확인 검증
 
@@ -398,3 +400,90 @@ app.security.remember-me-key=충분히_긴_임의의_문자열
 | 로그인 화면 | 회원가입 화면 |
 |---|---|
 | ![5주차 로그인 화면](docs/images/week5-login.png) | ![5주차 회원가입 화면](docs/images/week5-signup.png) |
+
+---
+
+# 자바웹프로그래밍(2) 6주차 - 권한 관리 및 관리자 페이지
+
+Spring Security의 역할 기반 접근 제어(RBAC)를 적용했다. 로그인 여부뿐 아니라 `USER`, `MANAGER`, `ADMIN` 권한에 따라 메뉴와 URL 접근을 구분하고, 중요한 회원 변경 기능에는 메서드 보안을 추가했다.
+
+20231028 최민
+
+## 구현한 기능
+
+- 로그인 사용자의 DB 정보와 세션 권한을 보여주는 `/mypage`
+- ADMIN 전용 회원 관리 `/admin/members`
+- 회원 권한을 `USER`, `MANAGER`, `ADMIN`으로 변경
+- 회원 삭제와 PRG 패턴 기반 결과 메시지
+- 권한이 부족할 때 사용자 정보와 요청 주소를 보여주는 403 화면
+- 관리자 본인의 권한 변경과 계정 삭제 방지
+- ADMIN과 MANAGER만 `/testdb` 접근 가능
+- USER에게 회원목록과 관리자 메뉴 숨김
+
+## 추가한 구조
+
+```text
+src/main/
+ ├ java/com/example/demo/
+ │  ├ config/
+ │  │  └ SecurityConfig.java       # URL 권한과 메서드 보안 활성화
+ │  ├ controller/
+ │  │  ├ AdminController.java      # 관리자 회원 조회·변경·삭제
+ │  │  └ MemberController.java     # 내 정보 화면
+ │  └ model/service/
+ │     └ MemberService.java        # 권한 변경·삭제와 본인 보호
+ └ resources/templates/
+    ├ admin/members.html           # 관리자 회원 관리
+    ├ error/403.html               # 접근 거부 화면
+    └ mypage.html                  # 로그인 사용자 정보
+docs/sql/
+ └ week6-admin-role.sql            # 가입한 계정에 ADMIN 권한 부여
+```
+
+## 접근 권한
+
+| 주소 | 비로그인 | USER | MANAGER | ADMIN |
+|---|---:|---:|---:|---:|
+| `/mypage` | 로그인 이동 | 허용 | 허용 | 허용 |
+| `/testdb` | 로그인 이동 | 403 | 허용 | 허용 |
+| `/admin/**` | 로그인 이동 | 403 | 403 | 허용 |
+
+`SecurityConfig`의 URL 규칙이 컨트롤러 전에 1차로 요청을 막는다. `changeRole()`과 `deleteMember()`에는 `@PreAuthorize("hasRole('ADMIN')")`를 적용해 다른 경로에서 서비스가 호출되더라도 다시 검사한다.
+
+## 실습하면서 정리한 것
+
+**인증과 인가** - 인증은 사용자가 누구인지 확인하는 과정이고, 인가는 인증된 사용자가 요청한 기능을 사용할 수 있는지 검사하는 과정이다. 로그인했더라도 권한이 부족하면 403 응답을 받는다.
+
+**화면 숨김은 보안이 아님** - `sec:authorize`는 권한에 따라 메뉴를 숨기지만 주소를 직접 입력하는 요청은 막지 못한다. 실제 보안은 `requestMatchers()`와 `@PreAuthorize`가 담당한다.
+
+**ROLE 접두사** - DB에는 `ADMIN`처럼 저장하고 `roles()`와 `hasRole()`에는 접두사 없이 역할 이름만 전달한다. Spring Security 내부에서는 `ROLE_ADMIN`으로 변환된다.
+
+**세션 권한** - 권한은 로그인할 때 세션에 복사된다. DB 권한을 변경한 사용자는 로그아웃 후 다시 로그인해야 새로운 권한이 적용된다.
+
+**IDOR 방지** - `/mypage?id=1`처럼 사용자가 번호를 선택하게 하지 않고 `Principal.getName()`으로 현재 로그인한 계정을 조회한다. URL 값을 조작해 다른 회원 정보를 보는 문제를 막는다.
+
+## 연습문제
+
+### 관리자 본인 보호
+
+현재 로그인한 관리자 아이디를 `SecurityContextHolder`에서 확인한다. 변경 또는 삭제 대상이 본인이라면 `자기 자신의 권한 변경·삭제는 할 수 없습니다.`를 표시하고 DB를 변경하지 않는다.
+
+### MANAGER 권한
+
+서버의 허용 권한 목록과 관리자 화면 선택 항목에 `MANAGER`를 추가했다. `20231028` 계정은 연습 결과에 맞춰 MANAGER로 설정했다. MANAGER는 회원목록을 볼 수 있지만 ADMIN 전용 회원 관리에는 접근할 수 없다.
+
+## 검증 결과
+
+- 비로그인 `/admin/members`: 302 로그인 이동
+- USER `/admin/members`: 403 접근 거부
+- ADMIN `/admin/members`: 200 회원 관리
+- MANAGER `/mypage`: 200
+- MANAGER `/testdb`: 200
+- MANAGER `/admin/members`: 403
+- 관리자 본인 권한 변경·삭제: 거부
+- `./mvnw test`: 5개 테스트 성공
+
+| USER 접근 거부 | ADMIN 회원 관리 | MANAGER 내 정보 |
+|---|---|---|
+| ![6주차 USER 403 화면](docs/images/week6-403.png) | ![6주차 관리자 회원 관리](docs/images/week6-admin-members.png) | ![6주차 MANAGER 내 정보](docs/images/week6-manager-mypage.png) |
+

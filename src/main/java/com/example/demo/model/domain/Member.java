@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,6 +15,11 @@ import lombok.Setter;
 @Getter
 @Setter
 public class Member {
+
+    public static final String ROLE_USER = "USER";
+    public static final String ROLE_MANAGER = "MANAGER";
+    public static final String ROLE_ADMIN = "ADMIN";
+    public static final Set<String> ALLOWED_ROLES = Set.of(ROLE_USER, ROLE_MANAGER, ROLE_ADMIN);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

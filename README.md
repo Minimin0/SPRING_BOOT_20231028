@@ -487,3 +487,99 @@ docs/sql/
 |---|---|---|
 | ![6주차 USER 403 화면](docs/images/week6-403.png) | ![6주차 관리자 회원 관리](docs/images/week6-admin-members.png) | ![6주차 MANAGER 내 정보](docs/images/week6-manager-mypage.png) |
 
+---
+
+# 자바웹프로그래밍(2) 7주차 - REST API와 JSON
+
+기존 회원 관리 기능을 REST API로 확장했다. 화면 전체를 다시 받는 대신 JavaScript의 `fetch()`로 JSON 데이터만 주고받으며, HTTP 메서드와 상태 코드로 조회·등록·수정·삭제 결과를 구분했다.
+
+20231028 최민
+
+## 구현한 기능
+
+- 누구나 호출할 수 있는 `GET /api/hello`
+- 로그인한 내 정보를 반환하는 `GET /api/me`
+- ADMIN 전용 회원 목록·상세 조회·등록·권한 변경·삭제 API
+- HTTP Basic 인증과 기존 폼 로그인 동시 지원
+- API 미인증 요청은 로그인 화면 이동 대신 `401 Unauthorized` 반환
+- `MemberResponse` DTO로 비밀번호 필드가 JSON에 노출되지 않도록 처리
+- `fetch()`로 API를 호출하고 요청·응답 기록을 보여주는 관리자 화면
+
+## 추가한 구조
+
+```text
+src/main/
+ ├ java/com/example/demo/
+ │  ├ controller/
+ │  │  ├ MemberApiController.java     # 공개 API와 내 정보 API
+ │  │  ├ AdminApiController.java      # ADMIN 전용 회원 REST API
+ │  │  └ ApiExceptionHandler.java     # API 예외 공통 처리
+ │  └ model/
+ │     ├ dto/
+ │     │  ├ MemberResponse.java       # 비밀번호 없는 응답 DTO
+ │     │  └ RoleRequest.java          # 권한 변경 JSON 요청
+ │     ├ repository/MemberRepository.java
+ │     └ service/MemberService.java
+ └ resources/templates/admin/
+    └ members-api.html                # fetch 기반 회원 관리 화면
+```
+
+## API 목록
+
+| 메서드 | 주소 | 권한 | 정상 응답 |
+|---|---|---|---|
+| GET | `/api/hello` | 공개 | 200 |
+| GET | `/api/me` | 로그인 | 200 |
+| GET | `/api/admin/members` | ADMIN | 200 |
+| GET | `/api/admin/members/{id}` | ADMIN | 200 또는 404 |
+| POST | `/api/admin/members` | ADMIN | 201 + Location |
+| PATCH | `/api/admin/members/{id}/role` | ADMIN | 200 |
+| DELETE | `/api/admin/members/{id}` | ADMIN | 204 |
+
+`/api/admin/**`는 `ADMIN`만 접근할 수 있다. 브라우저에서는 기존 로그인 세션을 사용하고, API 도구에서는 HTTP Basic 인증도 사용할 수 있게 했다. API 경로는 CSRF 검사에서 제외했지만 역할 검사는 그대로 적용된다.
+
+## 실습하면서 정리한 것
+
+**REST와 HTTP 메서드** - 같은 회원 자원을 대상으로 조회는 `GET`, 등록은 `POST`, 권한 일부 변경은 `PATCH`, 삭제는 `DELETE`로 구분했다. URL에 동사를 반복하지 않고 자원 중심으로 만들었다.
+
+**JSON 요청과 응답** - `@RequestBody`가 요청 JSON을 `MemberForm`이나 `RoleRequest`로 변환하고, `@RestController`가 반환 객체를 JSON으로 직렬화한다. 회원 엔티티를 그대로 반환하지 않고 `MemberResponse`로 변환해 비밀번호를 응답에서 제외했다.
+
+**상태 코드** - 등록 성공은 `201 Created`와 새 자원의 `Location` 헤더, 삭제 성공은 본문 없는 `204 No Content`를 반환한다. 로그인이 없으면 401, 권한이 부족하면 403, 회원이 없으면 404, 입력이 잘못되면 400을 반환한다.
+
+**fetch 화면** - `/admin/members-api`는 처음에는 HTML 틀만 렌더링한다. 이후 JavaScript가 API를 호출해 표를 그리고, 등록·변경·삭제 후 필요한 데이터만 다시 불러온다. 페이지를 새로고침하지 않아도 요청과 응답을 화면에서 바로 확인할 수 있다.
+
+## 연습문제
+
+### 회원 검색
+
+`GET /api/admin/members?keyword=검색어`를 추가했다. Repository의 파생 쿼리로 아이디 또는 이름에 검색어가 포함된 회원을 대소문자 구분 없이 찾고, 번호 순서로 반환한다. 검색어가 비어 있으면 전체 목록을 반환한다.
+
+### 예외 공통 처리
+
+`@RestControllerAdvice`와 `@ExceptionHandler`로 `IllegalArgumentException`을 한 곳에서 처리했다. 입력값이나 권한 값이 잘못되면 각 컨트롤러에서 같은 `try-catch`를 반복하지 않고 `400 Bad Request`와 `{"error":"메시지"}` 형식의 JSON을 반환한다.
+
+### 기존 화면과 API 화면 연결
+
+서버가 완성한 HTML을 보여주는 `/admin/members`에 `API 버전으로 보기` 링크를 추가했다. API 화면에서는 다시 기존 회원 관리 화면으로 돌아갈 수 있어 두 렌더링 방식을 비교할 수 있다.
+
+## 검증 결과
+
+- 공개 `/api/hello`: 200
+- 비로그인 `/api/me`: 401
+- MANAGER `/api/me`: 200
+- MANAGER `/api/admin/members`: 403
+- ADMIN 회원 목록·검색·상세 조회: 200
+- 없는 회원 조회: 404
+- 회원 등록: 201, 기본 권한 USER, Location 헤더 확인
+- 중복 가입과 허용되지 않은 권한: 공통 오류 JSON으로 400
+- 권한 변경: 200
+- ADMIN 회원 삭제: 204
+- 모든 회원 응답에 비밀번호 필드가 없는 것 확인
+- `./mvnw test`: 6개 테스트 성공
+- 브라우저 콘솔 오류와 데스크톱 가로 넘침 없음
+
+### 실습 결과
+
+이름으로 검색한 회원 목록과 실제 API 요청 주소, JSON 응답, 200 상태 코드를 한 화면에서 확인했다.
+
+![7주차 REST API 회원 관리 및 검색 결과](docs/images/week7-api-members.jpg)

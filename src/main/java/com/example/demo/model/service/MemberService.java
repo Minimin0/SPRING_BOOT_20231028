@@ -4,6 +4,7 @@ import com.example.demo.model.domain.Member;
 import com.example.demo.model.dto.MemberForm;
 import com.example.demo.model.repository.MemberRepository;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -61,20 +62,33 @@ public class MemberService implements UserDetailsService {
         return memberRepository.findAll(Sort.by("id"));
     }
 
+    public List<Member> findAll(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return findAll();
+        }
+        String query = keyword.strip();
+        return memberRepository.findByUsernameContainingIgnoreCaseOrNameContainingIgnoreCaseOrderByIdAsc(
+                query, query);
+    }
+
+    public Optional<Member> findById(Long id) {
+        return memberRepository.findById(id);
+    }
+
     @PreAuthorize("hasRole('ADMIN')")
-    public void changeRole(Long id, String role) {
+    public Member changeRole(Long id, String role) {
         if (!Member.ALLOWED_ROLES.contains(role)) {
             throw new IllegalArgumentException("허용되지 않는 권한입니다: " + role);
         }
-        Member member = findById(id);
+        Member member = requireMember(id);
         protectCurrentMember(member);
         member.setRole(role);
-        memberRepository.save(member);
+        return memberRepository.save(member);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
     public void deleteMember(Long id) {
-        Member member = findById(id);
+        Member member = requireMember(id);
         protectCurrentMember(member);
         memberRepository.delete(member);
     }
@@ -97,7 +111,7 @@ public class MemberService implements UserDetailsService {
         return value.strip();
     }
 
-    private Member findById(Long id) {
+    private Member requireMember(Long id) {
         return memberRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("회원이 존재하지 않습니다."));
     }

@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import com.example.demo.model.domain.Member;
 import com.example.demo.model.dto.MemberForm;
 import com.example.demo.model.repository.MemberRepository;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -75,6 +76,19 @@ class MemberServiceTests {
 
         assertEquals(Member.ROLE_MANAGER, member.getRole());
         verify(memberRepository).save(member);
+    }
+
+    @Test
+    void searchesMembersByTrimmedUsernameOrNameKeyword() {
+        List<Member> expected = List.of(member("20231028", Member.ROLE_MANAGER));
+        when(memberRepository
+                .findByUsernameContainingIgnoreCaseOrNameContainingIgnoreCaseOrderByIdAsc(
+                        "최민", "최민"))
+                .thenReturn(expected);
+
+        List<Member> result = memberService.findAll("  최민  ");
+
+        assertEquals(expected, result);
     }
 
     @Test

@@ -26,6 +26,11 @@ public class AdminController {
         return "admin/members";
     }
 
+    @GetMapping("/members-api")
+    public String membersApi() {
+        return "admin/members-api";
+    }
+
     @PostMapping("/members/{id}/role")
     public String changeRole(
             @PathVariable Long id,

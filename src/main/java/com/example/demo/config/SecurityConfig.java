@@ -5,11 +5,14 @@ import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 
 @Configuration
 @EnableMethodSecurity
@@ -34,7 +37,8 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**", "/fonts/**", "/favicon.ico")
                         .permitAll()
-                        .requestMatchers("/admin/**").hasRole(Member.ROLE_ADMIN)
+                        .requestMatchers("/api/hello").permitAll()
+                        .requestMatchers("/admin/**", "/api/admin/**").hasRole(Member.ROLE_ADMIN)
                         .requestMatchers("/testdb").hasAnyRole(Member.ROLE_ADMIN, Member.ROLE_MANAGER)
                         .anyRequest().authenticated())
                 .formLogin(form -> form
@@ -49,7 +53,12 @@ public class SecurityConfig {
                         .deleteCookies("JSESSIONID", "remember-me"))
                 .rememberMe(remember -> remember
                         .key(rememberMeKey)
-                        .tokenValiditySeconds(Math.toIntExact(rememberMeDuration.toSeconds())));
+                        .tokenValiditySeconds(Math.toIntExact(rememberMeDuration.toSeconds())))
+                .httpBasic(Customizer.withDefaults())
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
+                .exceptionHandling(ex -> ex.defaultAuthenticationEntryPointFor(
+                        new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+                        request -> request.getRequestURI().startsWith("/api/")));
         return http.build();
     }
 }

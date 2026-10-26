@@ -583,3 +583,346 @@ src/main/
 이름으로 검색한 회원 목록과 실제 API 요청 주소, JSON 응답, 200 상태 코드를 한 화면에서 확인했다.
 
 ![7주차 REST API 회원 관리 및 검색 결과](docs/images/week7-api-members.jpg)
+
+---
+
+---
+
+# 중간고사 시험 대비 핵심 요약 — 자바웹프로그래밍(2), 2~7주차
+
+> **범위:** 2~7주차 강의자료. **정리 기준:** 교수 강의자료의 이론·용어를 우선하고, 코드 예시는 이 저장소 `main`의 실제 구현을 기준으로 작성한다. 순수 프론트엔드 디자인(HTML/CSS 꾸미기, Bootstrap 클래스·아이콘, 이미지 교체)은 제외하고 **서버 동작과 직접 관련된 Thymeleaf·정적 파일 제공·`fetch()`**만 정리한다.
+>
+> **읽는 순서:** 각 주차의 `핵심 키워드 → 코드 → 작동 흐름/오답 주의`를 학습하고, 마지막 비교표로 암기한다. 강의 슬라이드 일부의 짧은 비밀번호·구버전 예시와 저장소 최신 코드가 다르면 최신 구현을 참고한다.
+
+## 2주차 — Spring Boot, MVC, Thymeleaf, URL 매핑
+
+**핵심 키워드**
+
+- **Spring Framework / Spring Boot:** Spring은 Java 기반 애플리케이션 프레임워크이며, Spring Boot는 자동 설정·내장 서버·의존성 관리로 실행 준비를 간소화한다.
+- **JDK / JVM:** Java 소스는 컴파일되어 바이트코드가 되고 JVM이 이를 실행한다. 이 프로젝트는 Java 21을 사용한다.
+- **Maven / `pom.xml`:** 프로젝트 빌드, 의존성, 플러그인을 관리한다. `mvnw`는 Maven Wrapper 실행 스크립트다.
+- **내장 Tomcat:** Spring Boot가 사용하는 Java 웹 애플리케이션 서버(WAS). 이 프로젝트의 기본 포트는 8080이다.
+- **Spring Container / DI:** Spring이 객체(Bean)의 생성과 의존성을 관리한다. 생성자 주입을 사용하면 Controller와 Service의 의존 관계가 분명해진다.
+- **DispatcherServlet:** Spring MVC의 **프론트 컨트롤러**로 HTTP 요청을 받아 적절한 Controller에 연결한다.
+- **MVC:** Model=화면에 전달할 데이터 / View=화면 렌더링 / Controller=요청 처리 및 흐름 제어.
+- **Thymeleaf:** 서버에서 Model 데이터를 템플릿에 바인딩해 HTML을 만들어 반환하는 템플릿 엔진(SSR).
+- **URL 매핑:** `@GetMapping("/hello")`은 URL `/hello`를 처리한다. `return "hello"`는 템플릿 `templates/hello.html`을 지정하는 **뷰 이름**이다.
+
+**핵심 코드 — `DemoController.java`**
+
+```java
+@Controller
+public class DemoController {
+    @GetMapping("/hello")
+    public String hello(Model model) {
+        model.addAttribute("data", "반갑습니다.");
+        return "hello"; // templates/hello.html
+    }
+}
+```
+
+```html
+<!-- templates/hello.html 내부 -->
+<p th:text="${data}"></p>
+<a href="/hello2">두번째 페이지</a>
+```
+
+**동작 순서:** 브라우저 `GET /hello` → Tomcat → DispatcherServlet → `@Controller`의 `hello()` → `Model`에 `data` 저장 → Thymeleaf가 `hello.html` 렌더링 → HTML 응답.
+
+**오답 주의:** `return "hello"`는 문자열 `hello`를 HTTP 응답 본문으로 보내는 것이 아니다(`@Controller` 기준). 또한 `/hello.html`과 `/hello`는 서로 다른 요청 경로다. 파일이 `templates`에 있다고 브라우저가 이름으로 바로 열 수 있는 것은 아니다.
+
+**강의 근거:** 2주차 p.14~16(JVM/실행), p.19~25(Tomcat·Spring Container·MVC·Thymeleaf), p.26~27(Controller 매핑).
+
+## 3주차 — 정적 리소스와 서버 측 페이지 제공
+
+**핵심 키워드**
+
+- **동적 템플릿:** `src/main/resources/templates/` — Controller가 반환한 뷰 이름과 Thymeleaf 처리로 렌더링한다.
+- **정적 파일:** `src/main/resources/static/`, `src/main/resources/public/` — 기본 설정에서는 이미지·CSS·JS·HTML을 정적 리소스로 제공한다.
+- **컨트롤러가 필요한 경우 / 불필요한 경우:** 요청에 따라 서버 데이터를 채울 페이지는 Controller + 템플릿 사용. 고정 소개 페이지는 `public/detailed_web.html`에 두고 `/detailed_web.html`로 직접 접근 가능.
+- **웹 호스팅:** 일반 웹 호스팅과 VPS/클라우드 호스팅의 차이(서버 환경 및 운영 자유도·비용). 맞춤형 Spring Boot 실행 환경을 고려해야 한다.
+- **Lighthouse:** 웹 성능·접근성·모범 사례·SEO를 측정하는 도구. 디자인 세부 설정 대신 **무엇을 측정하는지**만 파악한다.
+
+**실제 프로젝트 경로**
+
+```text
+src/main/resources/templates/index.html          # 서버에서 렌더링하는 화면
+src/main/resources/public/detailed_web.html     # GET /detailed_web.html
+src/main/resources/static/css/...                # GET /css/...
+src/main/resources/static/images/profile.png    # GET /images/profile.png
+```
+
+**오답 주의:** `public`에 있는 HTML과 `templates`에 있는 HTML의 URL 접근 방식을 혼동하지 말 것. **컨트롤러 매핑이 없는 정적 페이지도 접근 가능**하다(보안 설정에서 접근을 허용했다는 전제).
+
+**강의 근거:** 3주차 p.3~4(호스팅), p.9~10(리소스 폴더), p.22~24(상세 페이지·컨트롤러 불필요), p.29(Lighthouse). 순수 프론트 디자인 작업은 제외.
+
+## 4주차 — MySQL, JPA, HikariCP, 계층형 구조
+
+**핵심 키워드**
+
+- **RDBMS / MySQL:** 관계형 테이블을 저장·조회하는 DBMS. SQL을 이용해 데이터를 관리한다.
+- **JDBC / MySQL Connector/J:** Java 애플리케이션이 MySQL과 통신하기 위한 드라이버 기반 기술.
+- **Spring Data JPA / Hibernate:** Entity를 Java 객체로 표현하고 Repository 인터페이스로 DB 작업을 추상화한다. **JPA는 표준 명세이며 Hibernate는 대표 구현체**다.
+- **영속성(Persistence):** 데이터를 애플리케이션 실행 종료 이후에도 DB에 보관하는 특성/계층.
+- **HikariCP:** JDBC **커넥션 풀(Connection Pool)**. 연결을 재사용해 DB 연결 생성 비용을 줄인다. `HikariPool-1 - Start completed`는 커넥션 풀 시작 완료를 나타낸다.
+- **Entity/Repository/Service/Controller:** 테이블에 대응하는 객체 / DB 접근 / 업무 로직 / HTTP 요청·응답 처리.
+- **의존성 주입(DI):** Controller가 Service를, Service가 Repository를 **생성자로** 주입받는다.
+- **Hibernate `ddl-auto=update`:** Entity와 DB 스키마를 비교해 필요한 변경을 시도한다. 학습 환경에는 편리하지만 운영 환경에서는 별도 마이그레이션 관리가 바람직하다.
+
+**핵심 코드 — `TestDB.java`·`TestRepository.java`**
+
+```java
+@Entity
+@Table(name = "testdb")
+public class TestDB {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = true)
+    private String name;
+    private Integer age;
+    private String gender;
+}
+
+public interface TestRepository extends JpaRepository<TestDB, Long> {
+    TestDB findByName(String name); // 메서드 이름 기반 쿼리
+}
+```
+
+```java
+// TestService: repository.findAll()을 호출
+// DemoController: model.addAttribute("users", testService.findAll())
+@GetMapping("/testdb")
+public String testdb(Model model) {
+    model.addAttribute("users", testService.findAll());
+    return "testdb";
+}
+```
+
+```html
+<!-- templates/testdb.html: 목록 반복 출력 -->
+<tr th:each="user : ${users}">
+    <td th:text="${user.name}"></td>
+    <td th:text="${user.age}"></td>
+    <td th:text="${user.gender}"></td>
+</tr>
+```
+
+**전체 호출 흐름:** `GET /testdb` → `DemoController` → `TestService.findAll()` → `TestRepository.findAll()` → MySQL → Entity 목록 → `Model("users")` → Thymeleaf `th:each` 출력.
+
+**암기 구분:** `@Entity`=엔티티 / `@Table`=테이블 명 / `@Id`=PK / `@GeneratedValue(IDENTITY)`=DB 자동 증가 / `@Column`=컬럼 옵션 / `JpaRepository<Entity, ID타입>`=기본 CRUD / `findAll()`=전체 조회 / `findByName()`=이름 조건 조회.
+
+**강의 근거:** 4주차 p.8~14(DB 연동·HikariCP), p.17~25(계층·Entity~View), p.26~29(자동 테이블·조회·반복), p.31~32(나이·성별 추가).
+
+## 5주차 — Spring Security, 로그인, BCrypt, 세션
+
+**핵심 키워드**
+
+- **인증(Authentication):** 사용자가 누구인지 확인(로그인). **인가(Authorization):** 해당 사용자에게 기능 접근 권한이 있는지 확인(6주차에서 확장).
+- **SecurityFilterChain:** 컨트롤러로 전달되기 전에 요청을 통과시키는 보안 필터 체인.
+- **비밀번호 해시:** 평문 저장 금지. `BCryptPasswordEncoder.encode()`로 저장하고 `matches()`로 비교한다. 해시는 복호화하는 암호화와 다르다.
+- **세션 로그인:** 서버가 로그인 상태를 보관하고 브라우저는 `JSESSIONID` 같은 세션 쿠키를 전송한다.
+- **`UserDetailsService`:** `loadUserByUsername()`을 구현하여 DB 사용자를 Spring Security 인증 객체로 변환한다.
+- **DTO (`MemberForm`):** 화면 요청 데이터(아이디·비밀번호·확인·이름)를 받는 객체. DB Entity와 용도가 다르다.
+- **CSRF:** 로그인한 브라우저를 이용한 원치 않는 상태 변경 요청을 방지하는 보안 개념. Thymeleaf `th:action` 폼은 Spring Security와 연계해 토큰을 처리할 수 있다.
+- **remember-me:** 일반 세션과 구분되는 로그인 유지 기능. 이 프로젝트의 설정 기간은 `7d`다.
+
+**핵심 코드 — `SecurityConfig.java` / `MemberService.java` 요지**
+
+```java
+@Bean
+PasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder();
+}
+
+// SecurityConfig의 SecurityFilterChain 내부
+.formLogin(form -> form.loginPage("/login").permitAll())
+.logout(logout -> logout.logoutUrl("/logout")
+                        .invalidateHttpSession(true))
+```
+
+```java
+// 회원가입 시(요약)
+if (!password.equals(form.getPasswordConfirm())) {
+    throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+}
+member.setPassword(passwordEncoder.encode(password));
+member.setRole("USER");
+memberRepository.save(member);
+
+// MemberService는 UserDetailsService를 구현
+@Override
+public UserDetails loadUserByUsername(String username) {
+    Member m = memberRepository.findByUsername(username)
+        .orElseThrow(() -> new UsernameNotFoundException("회원을 찾을 수 없습니다."));
+    return User.builder().username(m.getUsername())
+        .password(m.getPassword()).roles(m.getRole()).build();
+}
+```
+
+**로그인 처리 흐름:** `POST /login` → Security 필터가 입력을 받음 → `loadUserByUsername()`이 DB 조회 → 해시 비밀번호 검증 → 인증 성공 시 세션 유지. 로그인 폼의 POST는 `MemberController`가 직접 구현한 것이 아니라 **Spring Security가 처리**한다.
+
+**오답 주의:** `@Bean`과 `@Service`의 역할, `encode()`와 `matches()`, Entity와 DTO, 세션과 remember-me를 구분한다. 강의 슬라이드의 간단한 비밀번호 예제와 달리 **현재 프로젝트의 회원가입은 최소 6자**를 요구한다.
+
+**강의 근거:** 5주차 p.3~5(보안·해시·세션), p.10~22(필터·구조·인증), p.24~25(템플릿·로그아웃), p.28~29(remember-me·확인값).
+
+## 6주차 — 인증 vs 인가, RBAC, 302·403, 관리자 보호
+
+**핵심 키워드**
+
+- **RBAC(Role-Based Access Control):** 사용자에게 역할을 부여하고 역할 단위로 기능을 허용한다. 현재 프로젝트는 `USER`, `MANAGER`, `ADMIN` 3개 역할 사용.
+- **`ROLE_` 접두사:** DB에는 `ADMIN`을 저장해도 Spring Security 내부 권한은 `ROLE_ADMIN`이 된다. `hasRole("ADMIN")`처럼 **접두사를 제외**하고 기술한다.
+- **화면 메뉴 숨김 ≠ 보안:** `sec:authorize`는 UI 표시를 제어할 뿐, URL 직접 요청을 차단하지 않는다.
+- **URL 수준 인가:** `requestMatchers("/admin/**").hasRole("ADMIN")`로 컨트롤러 실행 전에 요청 차단.
+- **메서드 수준 인가:** `@EnableMethodSecurity` + `@PreAuthorize("hasRole('ADMIN')")`로 Service 호출 시에도 재검사.
+- **현재 사용자:** `Principal.getName()` 또는 `SecurityContextHolder.getContext().getAuthentication()`에서 확인.
+- **PRG(Post/Redirect/Get):** POST 처리 후 Redirect로 GET을 요청해 재전송 문제를 줄인다. `RedirectAttributes.addFlashAttribute()`는 리다이렉트 후 일회성 알림 전달.
+- **세션 권한:** DB 역할을 바꾸어도 이미 로그인한 세션의 권한 정보는 즉시 새로 반영되지 않을 수 있다. 재로그인 후 확인.
+- **IDOR 방지:** 요청 URL의 임의 회원 ID 대신 인증된 주체로 본인 정보를 조회한다. 관리자 자신에 대한 권한 변경·삭제도 거부한다.
+
+**핵심 코드 — 두 겹의 인가**
+
+```java
+// SecurityConfig.java
+@Configuration
+@EnableMethodSecurity
+public class SecurityConfig {
+    // SecurityFilterChain 설정 내부
+    // .requestMatchers("/admin/**", "/api/admin/**").hasRole("ADMIN")
+    // .requestMatchers("/testdb").hasAnyRole("ADMIN", "MANAGER")
+}
+```
+
+```java
+// MemberService.java: 실제 수정·삭제 메서드에 적용
+@PreAuthorize("hasRole('ADMIN')")
+public Member changeRole(Long id, String role) {
+    if (!Member.ALLOWED_ROLES.contains(role)) {
+        throw new IllegalArgumentException("허용되지 않는 권한입니다: " + role);
+    }
+    // 기존 회원 확인, 자기 자신 변경 차단, 저장
+    // ...
+}
+```
+
+**상태 차이:** 비로그인 사용자가 일반 보호 페이지를 열면 **302 → 로그인 이동**, 로그인했지만 역할이 부족하면 **403 Forbidden**. API에서는 비인증을 **401 Unauthorized**로 반환하도록 설정되어 있다.
+
+**권한 예시**
+
+| 페이지 | 비로그인 | USER | MANAGER | ADMIN |
+|---|---|---|---|---|
+| `/mypage` | 로그인 이동 | 허용 | 허용 | 허용 |
+| `/testdb` | 로그인 이동 | 403 | 허용 | 허용 |
+| `/admin/members` | 로그인 이동 | 403 | 403 | 허용 |
+
+**강의 근거:** 6주차 p.3~5(인가·RBAC), p.11~18(사용자/역할/관리자), p.19~26(3단계 접근제어·403·메서드 보안), p.29~30(자기 보호·MANAGER).
+
+## 7주차 — REST API, JSON, DTO, HTTP 메서드·상태 코드
+
+**핵심 키워드**
+
+- **API:** 클라이언트와 서버 간 요청/응답 인터페이스. **JSON:** 객체·배열 등을 문자열 형태로 직렬화하는 데이터 교환 형식.
+- **SSR vs API:** `@Controller`는 뷰 이름을 반환해 HTML을 렌더링하고, `@RestController`는 객체를 JSON 등 응답 본문으로 직렬화한다.
+- **REST 방식:** URL은 **자원**, HTTP 메서드는 **동작**을 표현한다.
+- **HTTP 메서드:** `GET` 조회 / `POST` 생성 / `PATCH` 일부 변경 / `DELETE` 삭제.
+- **파라미터:** `@PathVariable`=경로 변수(`/members/3`) / `@RequestParam`=쿼리 파라미터(`?keyword=kim`) / `@RequestBody`=JSON 요청 본문.
+- **응답 DTO:** Entity를 그대로 반환하면 `password`가 노출될 수 있으므로 `MemberResponse(id, username, name, role)`로 필드를 제한.
+- **`ResponseEntity`:** 상태 코드·헤더·본문을 명시적으로 설정할 수 있다. 생성 성공 `201 Created + Location`, 삭제 성공 `204 No Content`.
+- **예외 공통 처리:** `@RestControllerAdvice` + `@ExceptionHandler`로 오류 JSON 형식을 일관되게 처리.
+- **인증:** 브라우저는 세션 쿠키, API 도구는 HTTP Basic 인증을 사용할 수 있다. 비인증 API는 401, 역할 부족 API는 403.
+- **`fetch()`:** 브라우저 JavaScript에서 비동기 HTTP 요청을 보내고 결과 JSON을 받아 화면 일부를 갱신한다.
+
+**핵심 코드 — DTO와 API**
+
+```java
+public record MemberResponse(Long id, String username, String name, String role) {
+    public static MemberResponse from(Member m) {
+        return new MemberResponse(m.getId(), m.getUsername(),
+                                  m.getName(), m.getRole());
+    }
+}
+```
+
+```java
+@RestController
+@RequestMapping("/api/admin/members")
+public class AdminApiController {
+    // MemberService 생성자 주입 등은 생략
+
+    @GetMapping
+    public List<MemberResponse> list(@RequestParam(required = false) String keyword) {
+        return memberService.findAll(keyword).stream()
+                .map(MemberResponse::from).toList();
+    }
+
+    @PostMapping
+    public ResponseEntity<MemberResponse> create(@RequestBody MemberForm form) {
+        Member saved = memberService.signup(form);
+        return ResponseEntity.created(URI.create("/api/admin/members/" + saved.getId()))
+                .body(MemberResponse.from(saved));
+    }
+
+    @PatchMapping("/{id}/role")
+    public MemberResponse changeRole(@PathVariable Long id, @RequestBody RoleRequest body) {
+        return MemberResponse.from(memberService.changeRole(id, body.role()));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        memberService.deleteMember(id);
+        return ResponseEntity.noContent().build();
+    }
+}
+```
+
+> 위 코드는 **시험용 발췌**로, 필요한 필드·생성자·import·일부 다른 메서드는 생략되어 있다. 전체 실행 가능한 코드는 실제 저장소 파일을 확인할 것.
+
+**실제 프로젝트 API 표**
+
+| 방식 | URL | 목적 | 대표 정상 상태 |
+|---|---|---|---|
+| GET | `/api/hello` | 공개 인사 JSON | 200 |
+| GET | `/api/me` | 로그인한 본인 정보 | 200 |
+| GET | `/api/admin/members` | 관리자 회원목록·검색 | 200 |
+| GET | `/api/admin/members/{id}` | 회원 상세, 없으면 404 | 200 |
+| POST | `/api/admin/members` | 회원 등록 | 201 |
+| PATCH | `/api/admin/members/{id}/role` | 권한 변경 | 200 |
+| DELETE | `/api/admin/members/{id}` | 회원 삭제 | 204 |
+
+**HTTP 코드 암기:** `200 OK` 성공 / `201 Created` 생성 / `204 No Content` 본문 없는 성공 / `302 Found` 리다이렉트 / `400 Bad Request` 잘못된 요청 / `401 Unauthorized` 인증 필요 / `403 Forbidden` 인가 거부 / `404 Not Found` 자원 없음 / `415 Unsupported Media Type` JSON 등 Content-Type 불일치.
+
+**오답 주의:** `@Controller` 반환 문자열을 JSON 본문으로 착각하지 말 것. `@RequestParam`과 `@PathVariable`, `@RequestBody`를 구분할 것. API 응답에 Entity를 그대로 노출하지 말 것. `fetch()` 화면은 HTML을 새로 받지 않고 요청 결과로 일부 내용을 갱신한다.
+
+**강의 근거:** 7주차 p.3~5(API·SSR·REST), p.10~14(JSON·DTO), p.15~20(인증·상태), p.21~29(CRUD API), p.31~32(검색·예외).
+
+## 시험 직전 — 반드시 구분할 개념
+
+| A | B | 결정적 차이 |
+|---|---|---|
+| Spring Framework | Spring Boot | Boot는 자동 설정·내장 서버 등 실행 편의성 제공 |
+| 웹 서버 | WAS(Tomcat) | 정적 자원 제공 중심 vs Java 서버 애플리케이션 실행 |
+| Model | View | 데이터 전달 vs 화면 렌더링 |
+| `templates/` | `static/`·`public/` | Thymeleaf 뷰 렌더링 vs 정적 자원 제공 |
+| `@Controller` | `@RestController` | 주로 뷰 이름 반환 vs 응답 본문(JSON) 반환 |
+| Entity | DTO | DB 매핑 객체 vs 요청/응답용 데이터 전달 객체 |
+| Service | Repository | 비즈니스 로직 vs DB 접근 |
+| JPA | Hibernate | 영속성 API 명세 vs 구현체 |
+| JDBC 연결 | HikariCP | DB 연결 인터페이스/드라이버 사용 vs 연결 풀 관리 |
+| `encode()` | `matches()` | 비밀번호 해시 생성 vs 평문과 해시 비교 |
+| 인증 | 인가 | 로그인 정체 확인 vs 접근 허가 검사 |
+| `sec:authorize` | `requestMatchers`·`@PreAuthorize` | 화면 표시 제어 vs 실제 URL·메서드 접근 통제 |
+| `ROLE_ADMIN` | `hasRole("ADMIN")` | 실제 내부 권한 이름 vs 설정 인수 표현 |
+| 세션 쿠키 | remember-me | 현재 인증 세션 식별 vs 장기 로그인 유지 |
+| `@PathVariable` | `@RequestParam` | `/members/3`의 `3` vs `?keyword=a`의 `a` |
+| `@RequestBody` | `@ResponseBody` | 요청 본문 역직렬화 vs 응답 본문 직렬화 |
+| 401 | 403 | 미인증 vs 인증되었으나 권한 없음 |
+| 201 | 204 | 자원 생성 성공 vs 응답 본문 없는 성공 |
+
+**핵심 흐름 3개 암기**
+
+1. **화면 조회:** URL → DispatcherServlet → Controller → Service → Repository → DB → Model → Thymeleaf → HTML.
+2. **로그인:** POST `/login` → Security 필터 → UserDetailsService → DB 사용자·BCrypt 검증 → 인증/세션.
+3. **API:** HTTP 요청 + JSON → Security 필터 → `@RestController` → Service → Repository → Entity → 응답 DTO → JSON + 상태 코드.
+
+**주의:** 위 요약은 이해·암기용이며, 교수 자료의 전체 문장이나 191페이지를 대체하는 전사본이 아니다. 시험 문제에 맞춰 주차별 강의자료 원문과 저장소 구현을 교차 확인한다.

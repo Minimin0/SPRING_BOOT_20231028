@@ -588,9 +588,9 @@ src/main/
 
 ---
 
-# 중간고사 시험 대비 핵심 요약 — 자바웹프로그래밍(2), 2~7주차
+# 중간고사 시험 대비 핵심 요약 — 자바웹프로그래밍(2), 2–7주차
 
-> **범위:** 2~7주차 강의자료. **정리 기준:** 교수 강의자료의 이론·용어를 우선하고, 코드 예시는 이 저장소 `main`의 실제 구현을 기준으로 작성한다. 순수 프론트엔드 디자인(HTML/CSS 꾸미기, Bootstrap 클래스·아이콘, 이미지 교체)은 제외하고 **서버 동작과 직접 관련된 Thymeleaf·정적 파일 제공·`fetch()`**만 정리한다.
+> **범위:** 2–7주차 강의자료. **정리 기준:** 교수 강의자료의 이론·용어를 우선하고, 코드 예시는 이 저장소 `main`의 실제 구현을 기준으로 작성한다. 순수 프론트엔드 디자인(HTML/CSS 꾸미기, Bootstrap 클래스·아이콘, 이미지 교체)은 제외하고 **서버 동작과 직접 관련된 Thymeleaf·정적 파일 제공·`fetch()`**만 정리한다.
 >
 > **읽는 순서:** 각 주차의 `핵심 키워드 → 코드 → 작동 흐름/오답 주의`를 학습하고, 마지막 비교표로 암기한다. 강의 슬라이드 일부의 짧은 비밀번호·구버전 예시와 저장소 최신 코드가 다르면 최신 구현을 참고한다.
 
@@ -631,7 +631,7 @@ public class DemoController {
 
 **오답 주의:** `return "hello"`는 문자열 `hello`를 HTTP 응답 본문으로 보내는 것이 아니다(`@Controller` 기준). 또한 `/hello.html`과 `/hello`는 서로 다른 요청 경로다. 파일이 `templates`에 있다고 브라우저가 이름으로 바로 열 수 있는 것은 아니다.
 
-**강의 근거:** 2주차 p.14~16(JVM/실행), p.19~25(Tomcat·Spring Container·MVC·Thymeleaf), p.26~27(Controller 매핑).
+**강의 근거:** 2주차 p.14–16(JVM/실행), p.19–25(Tomcat·Spring Container·MVC·Thymeleaf), p.26–27(Controller 매핑).
 
 ## 3주차 — 정적 리소스와 서버 측 페이지 제공
 
@@ -654,7 +654,7 @@ src/main/resources/static/images/profile.png    # GET /images/profile.png
 
 **오답 주의:** `public`에 있는 HTML과 `templates`에 있는 HTML의 URL 접근 방식을 혼동하지 말 것. **컨트롤러 매핑이 없는 정적 페이지도 접근 가능**하다(보안 설정에서 접근을 허용했다는 전제).
 
-**강의 근거:** 3주차 p.3~4(호스팅), p.9~10(리소스 폴더), p.22~24(상세 페이지·컨트롤러 불필요), p.29(Lighthouse). 순수 프론트 디자인 작업은 제외.
+**강의 근거:** 3주차 p.3–4(호스팅), p.9–10(리소스 폴더), p.22–24(상세 페이지·컨트롤러 불필요), p.29(Lighthouse). 순수 프론트 디자인 작업은 제외.
 
 ## 4주차 — MySQL, JPA, HikariCP, 계층형 구조
 
@@ -713,7 +713,7 @@ public String testdb(Model model) {
 
 **암기 구분:** `@Entity`=엔티티 / `@Table`=테이블 명 / `@Id`=PK / `@GeneratedValue(IDENTITY)`=DB 자동 증가 / `@Column`=컬럼 옵션 / `JpaRepository<Entity, ID타입>`=기본 CRUD / `findAll()`=전체 조회 / `findByName()`=이름 조건 조회.
 
-**강의 근거:** 4주차 p.8~14(DB 연동·HikariCP), p.17~25(계층·Entity~View), p.26~29(자동 테이블·조회·반복), p.31~32(나이·성별 추가).
+**강의 근거:** 4주차 p.8–14(DB 연동·HikariCP), p.17–25(계층·Entity–View), p.26–29(자동 테이블·조회·반복), p.31–32(나이·성별 추가).
 
 ## 5주차 — Spring Security, 로그인, BCrypt, 세션
 
@@ -765,7 +765,7 @@ public UserDetails loadUserByUsername(String username) {
 
 **오답 주의:** `@Bean`과 `@Service`의 역할, `encode()`와 `matches()`, Entity와 DTO, 세션과 remember-me를 구분한다. 강의 슬라이드의 간단한 비밀번호 예제와 달리 **현재 프로젝트의 회원가입은 최소 6자**를 요구한다.
 
-**강의 근거:** 5주차 p.3~5(보안·해시·세션), p.10~22(필터·구조·인증), p.24~25(템플릿·로그아웃), p.28~29(remember-me·확인값).
+**강의 근거:** 5주차 p.3–5(보안·해시·세션), p.10–22(필터·구조·인증), p.24–25(템플릿·로그아웃), p.28–29(remember-me·확인값).
 
 ## 6주차 — 인증 vs 인가, RBAC, 302·403, 관리자 보호
 
@@ -816,7 +816,7 @@ public Member changeRole(Long id, String role) {
 | `/testdb` | 로그인 이동 | 403 | 허용 | 허용 |
 | `/admin/members` | 로그인 이동 | 403 | 403 | 허용 |
 
-**강의 근거:** 6주차 p.3~5(인가·RBAC), p.11~18(사용자/역할/관리자), p.19~26(3단계 접근제어·403·메서드 보안), p.29~30(자기 보호·MANAGER).
+**강의 근거:** 6주차 p.3–5(인가·RBAC), p.11–18(사용자/역할/관리자), p.19–26(3단계 접근제어·403·메서드 보안), p.29–30(자기 보호·MANAGER).
 
 ## 7주차 — REST API, JSON, DTO, HTTP 메서드·상태 코드
 
@@ -894,7 +894,7 @@ public class AdminApiController {
 
 **오답 주의:** `@Controller` 반환 문자열을 JSON 본문으로 착각하지 말 것. `@RequestParam`과 `@PathVariable`, `@RequestBody`를 구분할 것. API 응답에 Entity를 그대로 노출하지 말 것. `fetch()` 화면은 HTML을 새로 받지 않고 요청 결과로 일부 내용을 갱신한다.
 
-**강의 근거:** 7주차 p.3~5(API·SSR·REST), p.10~14(JSON·DTO), p.15~20(인증·상태), p.21~29(CRUD API), p.31~32(검색·예외).
+**강의 근거:** 7주차 p.3–5(API·SSR·REST), p.10–14(JSON·DTO), p.15–20(인증·상태), p.21–29(CRUD API), p.31–32(검색·예외).
 
 ## 시험 직전 — 반드시 구분할 개념
 

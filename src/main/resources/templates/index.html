@@ -134,6 +134,10 @@ https://templatemo.com/tm-578-first-portfolio
                             <a class="nav-link click-scroll" href="#section_5">연락처</a>
                         </li>
 
+                        <li class="nav-item">
+                            <a class="nav-link" th:href="@{/board}">게시판</a>
+                        </li>
+
                         <li class="nav-item" sec:authorize="hasAnyRole('ADMIN', 'MANAGER')">
                             <a class="nav-link" th:href="@{/testdb}">회원목록</a>
                         </li>

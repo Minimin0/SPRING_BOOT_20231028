@@ -926,3 +926,61 @@ public class AdminApiController {
 3. **API:** HTTP 요청 + JSON → Security 필터 → `@RestController` → Service → Repository → Entity → 응답 DTO → JSON + 상태 코드.
 
 **주의:** 위 요약은 이해·암기용이며, 교수 자료의 전체 문장이나 191페이지를 대체하는 전사본이 아니다. 시험 문제에 맞춰 주차별 강의자료 원문과 저장소 구현을 교차 확인한다.
+
+# 자바웹프로그래밍(2) 9주차 - 게시판 CRUD와 본인 확인
+
+## 구현한 기능
+
+- 게시글 작성·목록·상세·수정·삭제
+- 게시글과 회원의 `@ManyToOne` 작성자 관계
+- 비로그인 사용자에게 목록·상세 공개, 쓰기·수정·삭제는 로그인 필요
+- 작성자만 수정, 작성자 또는 관리자만 삭제
+- 존재하지 않는 게시글의 404 화면
+- 상세 조회수 증가와 로그인 사용자의 글 모아 보기
+
+## 추가한 구조
+
+```text
+src/main/java/com/example/demo/
+├── controller/BoardController.java
+├── model/domain/Post.java
+├── model/dto/PostForm.java
+├── model/repository/PostRepository.java
+└── model/service/PostService.java
+
+src/main/resources/
+├── static/css/board.css
+└── templates/
+    ├── board/list.html
+    ├── board/detail.html
+    ├── board/form.html
+    └── error/404.html
+```
+
+## 게시판 주소와 권한
+
+| 기능 | 방식 | 주소 | 권한 |
+|---|---|---|---|
+| 목록 | GET | `/board` | 누구나 |
+| 상세 | GET | `/board/{id}` | 누구나 |
+| 내가 쓴 글 | GET | `/board/my` | 로그인 |
+| 글쓰기 | GET, POST | `/board/write` | 로그인 |
+| 수정 | GET, POST | `/board/{id}/edit` | 작성자 |
+| 삭제 | POST | `/board/{id}/delete` | 작성자 또는 관리자 |
+
+## 실습하면서 정리한 것
+
+- `PostForm`에는 제목과 내용만 받고 작성자는 서버가 로그인 사용자로 결정한다.
+- 화면에서 수정·삭제 버튼을 숨기는 것만으로는 부족하며 서비스에서 작성자를 다시 검사해야 한다.
+- 관리자는 다른 사용자의 글을 삭제할 수 있지만 대신 수정할 수는 없다.
+- 게시글 번호가 없으면 `ResponseStatusException`으로 404 화면을 반환한다.
+- `findByAuthor_UsernameOrderByIdDesc` 메서드 이름으로 작성자별 최신 글 조회 쿼리를 만든다.
+
+## 검증 결과
+
+- `./mvnw test`: 13개 테스트 성공
+- 비로그인 목록 200, 글쓰기 화면 로그인 이동 확인
+- 글 작성·조회수 증가·수정·내 글 목록·삭제 확인
+- 다른 사용자의 수정·삭제 요청 403 확인
+- 삭제한 글과 없는 글 404 확인
+- 테스트용 게시글과 계정 정리 완료

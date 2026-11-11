@@ -11,6 +11,8 @@ import static org.mockito.Mockito.when;
 import com.example.demo.model.domain.Member;
 import com.example.demo.model.dto.MemberForm;
 import com.example.demo.model.repository.MemberRepository;
+import com.example.demo.model.repository.CommentRepository;
+import com.example.demo.model.repository.PostRepository;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
@@ -29,13 +31,20 @@ class MemberServiceTests {
     @Mock
     private MemberRepository memberRepository;
 
+    @Mock
+    private PostRepository postRepository;
+
+    @Mock
+    private CommentRepository commentRepository;
+
     private PasswordEncoder passwordEncoder;
     private MemberService memberService;
 
     @BeforeEach
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder();
-        memberService = new MemberService(memberRepository, passwordEncoder);
+        memberService = new MemberService(
+                memberRepository, passwordEncoder, postRepository, commentRepository);
     }
 
     @AfterEach
@@ -108,6 +117,22 @@ class MemberServiceTests {
         assertEquals("자기 자신의 권한 변경·삭제는 할 수 없습니다.", error.getMessage());
         assertEquals("자기 자신의 권한 변경·삭제는 할 수 없습니다.", deleteError.getMessage());
         verify(memberRepository, never()).save(any());
+        verify(memberRepository, never()).delete(any());
+    }
+
+    @Test
+    void rejectsDeletingMemberWhoHasWrittenComment() {
+        Member member = member("writer", Member.ROLE_USER);
+        when(memberRepository.findById(3L)).thenReturn(java.util.Optional.of(member));
+        when(commentRepository.existsByAuthor(member)).thenReturn(true);
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("admin", "password"));
+
+        IllegalArgumentException error = assertThrows(
+                IllegalArgumentException.class,
+                () -> memberService.deleteMember(3L));
+
+        assertEquals("작성한 글이나 댓글이 있는 회원은 삭제할 수 없습니다.", error.getMessage());
         verify(memberRepository, never()).delete(any());
     }
 

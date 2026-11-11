@@ -2,34 +2,54 @@ package com.example.demo.controller;
 
 import com.example.demo.model.domain.Post;
 import com.example.demo.model.dto.PostForm;
+import com.example.demo.model.service.CommentService;
 import com.example.demo.model.service.PostService;
 import java.security.Principal;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 @RequestMapping("/board")
 public class BoardController {
 
     private final PostService postService;
+    private final CommentService commentService;
 
-    public BoardController(PostService postService) {
+    public BoardController(PostService postService, CommentService commentService) {
         this.postService = postService;
+        this.commentService = commentService;
     }
 
     @GetMapping
-    public String list(Model model) {
-        model.addAttribute("posts", postService.findAll());
+    public String list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "all") String type,
+            Model model) {
+        String normalizedKeyword = keyword == null ? null : keyword.strip();
+        Page<Post> posts = postService.findPage(normalizedKeyword, type, page);
+        model.addAttribute("posts", posts.getContent());
+        model.addAttribute("page", posts);
+        model.addAttribute("keyword", normalizedKeyword);
+        model.addAttribute("type", type);
         return "board/list";
     }
 
     @GetMapping("/my")
-    public String myPosts(Principal principal, Model model) {
-        model.addAttribute("posts", postService.findByAuthor(principal.getName()));
+    public String myPosts(
+            @RequestParam(defaultValue = "0") int page,
+            Principal principal,
+            Model model) {
+        Page<Post> posts = postService.findByAuthor(principal.getName(), page);
+        model.addAttribute("posts", posts.getContent());
+        model.addAttribute("page", posts);
+        model.addAttribute("pageUrl", "/board/my");
         model.addAttribute("listTitle", "내가 쓴 글");
         return "board/list";
     }
@@ -52,7 +72,9 @@ public class BoardController {
 
     @GetMapping("/{id}")
     public String detail(@PathVariable Long id, Model model) {
-        model.addAttribute("post", postService.read(id));
+        Post post = postService.read(id);
+        model.addAttribute("post", post);
+        model.addAttribute("comments", commentService.findByPost(post));
         return "board/detail";
     }
 

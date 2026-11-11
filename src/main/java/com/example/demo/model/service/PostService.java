@@ -6,7 +6,8 @@ import com.example.demo.model.dto.PostForm;
 import com.example.demo.model.repository.MemberRepository;
 import com.example.demo.model.repository.PostRepository;
 import java.time.LocalDateTime;
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
@@ -18,6 +19,8 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class PostService {
 
+    public static final int PAGE_SIZE = 10;
+
     private final PostRepository postRepository;
     private final MemberRepository memberRepository;
 
@@ -26,12 +29,19 @@ public class PostService {
         this.memberRepository = memberRepository;
     }
 
-    public List<Post> findAll() {
-        return postRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
+    public Page<Post> findPage(String keyword, String type, int page) {
+        PageRequest pageable = pageRequest(page);
+        if (keyword == null || keyword.isBlank()) {
+            return postRepository.findAll(pageable);
+        }
+        String query = keyword.strip();
+        return "writer".equals(type)
+                ? postRepository.searchByWriter(query, pageable)
+                : postRepository.search(query, pageable);
     }
 
-    public List<Post> findByAuthor(String username) {
-        return postRepository.findByAuthor_UsernameOrderByIdDesc(username);
+    public Page<Post> findByAuthor(String username, int page) {
+        return postRepository.findByAuthor_Username(username, pageRequest(page));
     }
 
     public Post write(PostForm form, String username) {
@@ -110,5 +120,12 @@ public class PostService {
             throw new AccessDeniedException("로그인이 필요합니다.");
         }
         return authentication;
+    }
+
+    private PageRequest pageRequest(int page) {
+        return PageRequest.of(
+                Math.max(page, 0),
+                PAGE_SIZE,
+                Sort.by(Sort.Direction.DESC, "id"));
     }
 }

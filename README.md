@@ -998,3 +998,67 @@ src/main/resources/
 다른 사용자가 주소로 수정 화면에 직접 접근하면 서버의 작성자 검사에 의해 403 화면이 표시된다.
 
 ![9주차 다른 사용자 게시글 수정 접근 차단](docs/images/week9-board-403.jpg)
+
+# 자바웹프로그래밍(2) 10주차 - 페이징·검색과 댓글
+
+## 구현한 기능
+
+- 게시글 목록과 내가 쓴 글을 한 페이지에 10개씩 표시
+- 제목·내용 또는 작성자 이름으로 검색하고 검색 결과에도 페이징 적용
+- 게시글 상세 화면에서 댓글 작성·목록·삭제
+- 댓글 작성자 또는 관리자만 댓글 삭제 가능
+- 게시글 삭제 시 연결된 댓글 함께 삭제
+- 작성한 글이나 댓글이 있는 회원 삭제 차단
+
+## 추가한 구조
+
+```text
+src/main/java/com/example/demo/
+├── controller/CommentController.java
+├── model/domain/Comment.java
+├── model/repository/CommentRepository.java
+└── model/service/CommentService.java
+```
+
+## 게시판 주소와 기능
+
+| 기능 | 방식 | 주소 | 권한 |
+|---|---|---|---|
+| 목록·검색·페이징 | GET | `/board?page=0&keyword=검색어&type=all` | 누구나 |
+| 작성자 검색 | GET | `/board?keyword=이름&type=writer` | 누구나 |
+| 내가 쓴 글 페이징 | GET | `/board/my?page=0` | 로그인 |
+| 댓글 작성 | POST | `/board/{postId}/comments` | 로그인 |
+| 댓글 삭제 | POST | `/board/{postId}/comments/{id}/delete` | 작성자 또는 관리자 |
+
+## 실습하면서 정리한 것
+
+- `PageRequest`의 페이지 번호는 0부터 시작하고, 화면에는 1부터 표시한다.
+- 검색어는 JPQL의 이름 있는 매개변수로 전달해 문자열과 SQL 문장을 분리한다.
+- 댓글은 게시글과 회원을 각각 `@ManyToOne`으로 참조한다.
+- 댓글 작성자는 화면 입력이 아니라 로그인한 사용자의 정보로 결정한다.
+- 댓글 등록 후 상세 화면으로 리다이렉트해 새로고침 중복 등록을 막는다.
+- 게시글의 `@OneToMany(cascade = CascadeType.REMOVE)`로 게시글과 댓글을 함께 삭제한다.
+
+## 검증 결과
+
+- `./mvnw test`: 19개 테스트 성공
+- 게시글 13개가 첫 페이지 10개, 두 번째 페이지 3개로 표시되는지 확인
+- 제목·내용 검색과 작성자 검색 결과 및 페이지 링크의 검색 조건 유지 확인
+- 댓글 등록, 빈 댓글 안내, 작성자 삭제, 타인 삭제 요청 403 확인
+- 댓글이 달린 게시글 삭제 후 게시글 404 및 댓글 연쇄 삭제 확인
+- 작성한 글이나 댓글이 있는 회원의 삭제 차단 확인
+- 테스트용 게시글과 계정 정리 완료
+
+### 실습 결과
+
+게시글 13개가 10개 단위로 나뉘고 목록 아래에 현재 페이지와 이동 버튼이 표시된다.
+
+![10주차 게시판 페이징](docs/images/week10-board-pagination.jpg)
+
+제목과 내용에서 `스터디`를 검색하면 일치하는 게시글 3개만 표시된다.
+
+![10주차 게시판 검색](docs/images/week10-board-search.jpg)
+
+로그인한 사용자가 상세 화면에서 댓글을 확인하고 새 댓글을 등록하거나 본인 댓글을 삭제할 수 있다.
+
+![10주차 게시판 댓글](docs/images/week10-board-comments.jpg)

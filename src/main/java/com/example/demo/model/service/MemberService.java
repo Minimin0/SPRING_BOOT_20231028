@@ -3,6 +3,8 @@ package com.example.demo.model.service;
 import com.example.demo.model.domain.Member;
 import com.example.demo.model.dto.MemberForm;
 import com.example.demo.model.repository.MemberRepository;
+import com.example.demo.model.repository.CommentRepository;
+import com.example.demo.model.repository.PostRepository;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Sort;
@@ -21,10 +23,18 @@ public class MemberService implements UserDetailsService {
 
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PostRepository postRepository;
+    private final CommentRepository commentRepository;
 
-    public MemberService(MemberRepository memberRepository, PasswordEncoder passwordEncoder) {
+    public MemberService(
+            MemberRepository memberRepository,
+            PasswordEncoder passwordEncoder,
+            PostRepository postRepository,
+            CommentRepository commentRepository) {
         this.memberRepository = memberRepository;
         this.passwordEncoder = passwordEncoder;
+        this.postRepository = postRepository;
+        this.commentRepository = commentRepository;
     }
 
     public Member signup(MemberForm form) {
@@ -90,6 +100,9 @@ public class MemberService implements UserDetailsService {
     public void deleteMember(Long id) {
         Member member = requireMember(id);
         protectCurrentMember(member);
+        if (postRepository.existsByAuthor(member) || commentRepository.existsByAuthor(member)) {
+            throw new IllegalArgumentException("작성한 글이나 댓글이 있는 회원은 삭제할 수 없습니다.");
+        }
         memberRepository.delete(member);
     }
 

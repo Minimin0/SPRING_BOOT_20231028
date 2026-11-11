@@ -13,6 +13,9 @@ import com.example.demo.model.dto.PostForm;
 import com.example.demo.model.repository.MemberRepository;
 import com.example.demo.model.repository.PostRepository;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -129,6 +132,22 @@ class PostServiceTests {
         assertThrows(AccessDeniedException.class, () -> postService.delete(1L));
 
         verify(postRepository, never()).delete(any());
+    }
+
+    @Test
+    void searchesWriterWithTenPostsPerPage() {
+        Page<Post> expected = new PageImpl<>(java.util.List.of());
+        when(postRepository.searchByWriter(
+                org.mockito.ArgumentMatchers.eq("홍길동"), any(PageRequest.class)))
+                .thenReturn(expected);
+
+        Page<Post> result = postService.findPage("  홍길동  ", "writer", -1);
+
+        assertEquals(expected, result);
+        verify(postRepository).searchByWriter(
+                org.mockito.ArgumentMatchers.eq("홍길동"),
+                org.mockito.ArgumentMatchers.argThat(pageable ->
+                        pageable.getPageNumber() == 0 && pageable.getPageSize() == 10));
     }
 
     private PostForm form(String title, String content) {

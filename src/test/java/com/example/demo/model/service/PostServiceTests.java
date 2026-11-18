@@ -11,6 +11,7 @@ import com.example.demo.model.domain.Member;
 import com.example.demo.model.domain.Post;
 import com.example.demo.model.dto.PostForm;
 import com.example.demo.model.repository.MemberRepository;
+import com.example.demo.model.repository.EnrollmentRepository;
 import com.example.demo.model.repository.PostRepository;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -36,11 +37,18 @@ class PostServiceTests {
     @Mock
     private MemberRepository memberRepository;
 
+    @Mock
+    private EnrollmentRepository enrollmentRepository;
+
+    @Mock
+    private FileStore fileStore;
+
     private PostService postService;
 
     @BeforeEach
     void setUp() {
-        postService = new PostService(postRepository, memberRepository);
+        postService = new PostService(
+                postRepository, memberRepository, enrollmentRepository, fileStore);
     }
 
     @AfterEach
@@ -148,6 +156,37 @@ class PostServiceTests {
                 org.mockito.ArgumentMatchers.eq("홍길동"),
                 org.mockito.ArgumentMatchers.argThat(pageable ->
                         pageable.getPageNumber() == 0 && pageable.getPageSize() == 10));
+    }
+
+    @Test
+    void writesRecruitPostWithPoster() {
+        Member author = member("student1", Member.ROLE_USER);
+        PostForm form = form("스터디 모집", "함께 공부합니다.");
+        form.setCapacity(5);
+        when(memberRepository.findByUsername("student1")).thenReturn(Optional.of(author));
+        when(fileStore.save(form.getPoster())).thenReturn("poster.png");
+        when(postRepository.save(any(Post.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Post post = postService.write(form, "student1");
+
+        assertEquals(5, post.getCapacity());
+        assertEquals("poster.png", post.getPosterFile());
+        assertEquals(5, post.getRemaining());
+    }
+
+    @Test
+    void rejectsDeletingRecruitPostWithEnrollments() {
+        Post post = post(member("student1", Member.ROLE_USER));
+        when(postRepository.findById(1L)).thenReturn(Optional.of(post));
+        when(enrollmentRepository.existsByPost(post)).thenReturn(true);
+        authenticate("student1", "ROLE_USER");
+
+        IllegalStateException error = assertThrows(
+                IllegalStateException.class,
+                () -> postService.delete(1L));
+
+        assertEquals("신청자가 있는 모집글은 삭제할 수 없습니다.", error.getMessage());
+        verify(postRepository, never()).delete(any());
     }
 
     private PostForm form(String title, String content) {

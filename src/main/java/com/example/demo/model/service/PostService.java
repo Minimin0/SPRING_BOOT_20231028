@@ -3,9 +3,12 @@ package com.example.demo.model.service;
 import com.example.demo.model.domain.Member;
 import com.example.demo.model.domain.Post;
 import com.example.demo.model.dto.PostForm;
+import com.example.demo.model.repository.EnrollmentRepository;
 import com.example.demo.model.repository.MemberRepository;
 import com.example.demo.model.repository.PostRepository;
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -23,10 +26,18 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final MemberRepository memberRepository;
+    private final EnrollmentRepository enrollmentRepository;
+    private final FileStore fileStore;
 
-    public PostService(PostRepository postRepository, MemberRepository memberRepository) {
+    public PostService(
+            PostRepository postRepository,
+            MemberRepository memberRepository,
+            EnrollmentRepository enrollmentRepository,
+            FileStore fileStore) {
         this.postRepository = postRepository;
         this.memberRepository = memberRepository;
+        this.enrollmentRepository = enrollmentRepository;
+        this.fileStore = fileStore;
     }
 
     public Page<Post> findPage(String keyword, String type, int page) {
@@ -44,6 +55,10 @@ public class PostService {
         return postRepository.findByAuthor_Username(username, pageRequest(page));
     }
 
+    public List<Post> findAllById(Collection<Long> ids) {
+        return postRepository.findAllById(ids);
+    }
+
     public Post write(PostForm form, String username) {
         validate(form);
         Member author = memberRepository.findByUsername(username)
@@ -54,7 +69,15 @@ public class PostService {
         post.setContent(form.getContent());
         post.setAuthor(author);
         post.setCreatedAt(LocalDateTime.now());
-        return postRepository.save(post);
+        post.setCapacity(form.getCapacity());
+        String posterFile = fileStore.save(form.getPoster());
+        post.setPosterFile(posterFile);
+        try {
+            return postRepository.save(post);
+        } catch (RuntimeException e) {
+            fileStore.delete(posterFile);
+            throw e;
+        }
     }
 
     public Post findById(Long id) {
@@ -89,10 +112,18 @@ public class PostService {
         if (!isAdmin()) {
             checkWriter(post);
         }
+        if (enrollmentRepository.existsByPost(post)) {
+            throw new IllegalStateException("신청자가 있는 모집글은 삭제할 수 없습니다.");
+        }
         postRepository.delete(post);
+        fileStore.delete(post.getPosterFile());
     }
 
     private void validate(PostForm form) {
+        if (form.getCapacity() != null
+                && (form.getCapacity() < 1 || form.getCapacity() > 100)) {
+            throw new IllegalArgumentException("모집 인원은 1~100명으로 입력하세요.");
+        }
         if (form.getTitle() == null || form.getTitle().isBlank()
                 || form.getContent() == null || form.getContent().isBlank()) {
             throw new IllegalArgumentException("제목과 내용을 모두 입력하세요.");

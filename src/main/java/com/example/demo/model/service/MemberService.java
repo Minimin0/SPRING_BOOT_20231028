@@ -4,6 +4,7 @@ import com.example.demo.model.domain.Member;
 import com.example.demo.model.dto.MemberForm;
 import com.example.demo.model.repository.MemberRepository;
 import com.example.demo.model.repository.CommentRepository;
+import com.example.demo.model.repository.EnrollmentRepository;
 import com.example.demo.model.repository.PostRepository;
 import java.util.List;
 import java.util.Optional;
@@ -25,16 +26,19 @@ public class MemberService implements UserDetailsService {
     private final PasswordEncoder passwordEncoder;
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
+    private final EnrollmentRepository enrollmentRepository;
 
     public MemberService(
             MemberRepository memberRepository,
             PasswordEncoder passwordEncoder,
             PostRepository postRepository,
-            CommentRepository commentRepository) {
+            CommentRepository commentRepository,
+            EnrollmentRepository enrollmentRepository) {
         this.memberRepository = memberRepository;
         this.passwordEncoder = passwordEncoder;
         this.postRepository = postRepository;
         this.commentRepository = commentRepository;
+        this.enrollmentRepository = enrollmentRepository;
     }
 
     public Member signup(MemberForm form) {
@@ -100,8 +104,10 @@ public class MemberService implements UserDetailsService {
     public void deleteMember(Long id) {
         Member member = requireMember(id);
         protectCurrentMember(member);
-        if (postRepository.existsByAuthor(member) || commentRepository.existsByAuthor(member)) {
-            throw new IllegalArgumentException("작성한 글이나 댓글이 있는 회원은 삭제할 수 없습니다.");
+        if (postRepository.existsByAuthor(member)
+                || commentRepository.existsByAuthor(member)
+                || enrollmentRepository.existsByMember(member)) {
+            throw new IllegalArgumentException("작성한 글이나 댓글 또는 신청 내역이 있는 회원은 삭제할 수 없습니다.");
         }
         memberRepository.delete(member);
     }

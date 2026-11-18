@@ -12,6 +12,7 @@ import com.example.demo.model.domain.Member;
 import com.example.demo.model.dto.MemberForm;
 import com.example.demo.model.repository.MemberRepository;
 import com.example.demo.model.repository.CommentRepository;
+import com.example.demo.model.repository.EnrollmentRepository;
 import com.example.demo.model.repository.PostRepository;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +38,9 @@ class MemberServiceTests {
     @Mock
     private CommentRepository commentRepository;
 
+    @Mock
+    private EnrollmentRepository enrollmentRepository;
+
     private PasswordEncoder passwordEncoder;
     private MemberService memberService;
 
@@ -44,7 +48,11 @@ class MemberServiceTests {
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder();
         memberService = new MemberService(
-                memberRepository, passwordEncoder, postRepository, commentRepository);
+                memberRepository,
+                passwordEncoder,
+                postRepository,
+                commentRepository,
+                enrollmentRepository);
     }
 
     @AfterEach
@@ -132,7 +140,7 @@ class MemberServiceTests {
                 IllegalArgumentException.class,
                 () -> memberService.deleteMember(3L));
 
-        assertEquals("작성한 글이나 댓글이 있는 회원은 삭제할 수 없습니다.", error.getMessage());
+        assertEquals("작성한 글이나 댓글 또는 신청 내역이 있는 회원은 삭제할 수 없습니다.", error.getMessage());
         verify(memberRepository, never()).delete(any());
     }
 

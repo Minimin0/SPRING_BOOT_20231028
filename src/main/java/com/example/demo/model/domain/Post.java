@@ -47,4 +47,23 @@ public class Post {
 
     @OneToMany(mappedBy = "post", cascade = CascadeType.REMOVE)
     private List<Comment> comments = new ArrayList<>();
+
+    private Integer capacity;
+
+    @Column(nullable = false)
+    private int appliedCount;
+
+    private String posterFile;
+
+    public boolean isRecruit() {
+        return capacity != null;
+    }
+
+    public boolean isFull() {
+        return isRecruit() && appliedCount >= capacity;
+    }
+
+    public int getRemaining() {
+        return isRecruit() ? Math.max(0, capacity - appliedCount) : 0;
+    }
 }

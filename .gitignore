@@ -40,3 +40,6 @@ _workspace/
 
 # 로컬 DB 계정과 보안 키
 /src/main/resources/application-secret.properties
+
+# 실행 중 업로드한 사용자 파일
+/uploads/

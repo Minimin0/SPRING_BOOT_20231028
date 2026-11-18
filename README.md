@@ -1062,3 +1062,77 @@ src/main/java/com/example/demo/
 로그인한 사용자가 상세 화면에서 댓글을 확인하고 새 댓글을 등록하거나 본인 댓글을 삭제할 수 있다.
 
 ![10주차 게시판 댓글](docs/images/week10-board-comments.jpg)
+
+# 자바웹프로그래밍(2) 11주차 - 신청 바구니와 트랜잭션
+
+## 구현한 기능
+
+- 기존 게시글을 정원·신청 인원·포스터를 가진 모집글로 확장
+- JPG·PNG·GIF·WebP 포스터 업로드와 파일 형식·시그니처·크기 검증
+- 로그인 세션에 모집글 번호를 저장하는 신청 바구니
+- 신청 내역 저장과 신청 인원 증가를 하나로 묶는 트랜잭션
+- 본인 신청 취소와 신청 인원 복원
+- 신청 내역이 있는 모집글·회원 삭제 차단
+- 게시글 삭제 시 서버에 저장된 포스터 파일 정리
+
+## 추가한 구조
+
+```text
+src/main/java/com/example/demo/
+├── config/WebConfig.java
+├── controller/CartController.java
+├── model/domain/Enrollment.java
+├── model/repository/EnrollmentRepository.java
+└── model/service/
+    ├── EnrollmentService.java
+    └── FileStore.java
+
+src/main/resources/templates/
+├── cart.html
+└── error/413.html
+```
+
+## 신청 주소와 권한
+
+| 기능 | 방식 | 주소 | 권한 |
+|---|---|---|---|
+| 포스터 조회 | GET | `/uploads/{파일명}` | 누구나 |
+| 신청 바구니 | GET | `/cart` | 로그인 |
+| 모집글 담기 | POST | `/cart/{postId}` | 로그인 |
+| 바구니에서 빼기 | POST | `/cart/{postId}/remove` | 로그인 |
+| 전체 신청 확정 | POST | `/cart/confirm` | 로그인 |
+| 신청 취소 | POST | `/cart/enrollments/{id}/cancel` | 신청자 본인 |
+
+## 실습하면서 정리한 것
+
+- 모집 인원이 있으면 모집글, 없으면 기존 일반 게시글로 처리한다.
+- 포스터의 확장자와 파일 앞부분의 시그니처를 함께 검사하고 서버가 UUID 파일명을 만든다.
+- 바구니는 `LinkedHashSet`을 세션에 저장해 담은 순서를 유지하면서 중복을 막는다.
+- 신청 확정 순간에 중복 신청과 남은 자리를 다시 검사한다.
+- `@Transactional`로 바구니 전체 신청을 묶어 하나라도 실패하면 모두 롤백한다.
+- 신청 취소는 신청 내역 삭제와 신청 인원 감소를 같은 트랜잭션에서 처리한다.
+
+## 검증 결과
+
+- `./mvnw test`: 27개 테스트 성공
+- 모집글·포스터 작성과 비로그인 포스터 조회 확인
+- 위장 PNG 차단, 7MB 파일 413 응답, 모집 인원 범위 검사 확인
+- 바구니 중복 제거와 로그인 세션별 분리 확인
+- 마감 모집글이 섞인 전체 확정 실패 시 앞선 신청까지 롤백 확인
+- 정상 신청 확정과 본인 취소, 타인 취소 요청 403 확인
+- 신청자가 있는 모집글 삭제 차단과 취소 후 게시글·포스터 삭제 확인
+- 테스트용 게시글·신청·계정·업로드 파일 정리 완료
+
+### 실습 결과
+
+게시판 목록에서 모집 중인 글의 신청 인원과 정원, 마감 상태를 바로 확인할 수 있다.
+
+![11주차 모집글 목록](docs/images/week11-recruit-list.jpg)
+
+모집글 상세 화면에 포스터와 정원, 신청 인원, 남은 자리 진행률이 표시된다.
+
+![11주차 포스터 모집글 상세](docs/images/week11-recruit-detail.jpg)
+
+신청 바구니와 확정된 신청 내역을 한 화면에서 확인하고 신청을 취소할 수 있다.
+
+![11주차 신청 바구니와 신청 내역](docs/images/week11-enrollment-cart.jpg)

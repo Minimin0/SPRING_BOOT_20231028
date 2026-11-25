@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,12 +35,15 @@ class EnrollmentServiceTests {
     @Mock
     private MemberRepository memberRepository;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private EnrollmentService enrollmentService;
 
     @BeforeEach
     void setUp() {
         enrollmentService = new EnrollmentService(
-                enrollmentRepository, postRepository, memberRepository);
+                enrollmentRepository, postRepository, memberRepository, eventPublisher);
     }
 
     @Test
@@ -57,6 +61,7 @@ class EnrollmentServiceTests {
         assertEquals(1, first.getAppliedCount());
         assertEquals(2, second.getAppliedCount());
         verify(enrollmentRepository, org.mockito.Mockito.times(2)).save(any(Enrollment.class));
+        verify(eventPublisher, org.mockito.Mockito.times(4)).publishEvent(any(Object.class));
     }
 
     @Test
@@ -87,6 +92,7 @@ class EnrollmentServiceTests {
 
         assertEquals(0, post.getAppliedCount());
         verify(enrollmentRepository).delete(enrollment);
+        verify(eventPublisher, org.mockito.Mockito.times(2)).publishEvent(any(Object.class));
     }
 
     @Test
@@ -109,12 +115,14 @@ class EnrollmentServiceTests {
         post.setTitle(title);
         post.setCapacity(capacity);
         post.setAppliedCount(appliedCount);
+        post.setAuthor(member("admin"));
         return post;
     }
 
     private Member member(String username) {
         Member member = new Member();
         member.setUsername(username);
+        member.setName(username);
         return member;
     }
 }

@@ -3,12 +3,15 @@ package com.example.demo.model.service;
 import com.example.demo.model.domain.Enrollment;
 import com.example.demo.model.domain.Member;
 import com.example.demo.model.domain.Post;
+import com.example.demo.model.dto.Notification;
+import com.example.demo.model.dto.SeatMessage;
 import com.example.demo.model.repository.EnrollmentRepository;
 import com.example.demo.model.repository.MemberRepository;
 import com.example.demo.model.repository.PostRepository;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -21,14 +24,17 @@ public class EnrollmentService {
     private final EnrollmentRepository enrollmentRepository;
     private final PostRepository postRepository;
     private final MemberRepository memberRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public EnrollmentService(
             EnrollmentRepository enrollmentRepository,
             PostRepository postRepository,
-            MemberRepository memberRepository) {
+            MemberRepository memberRepository,
+            ApplicationEventPublisher eventPublisher) {
         this.enrollmentRepository = enrollmentRepository;
         this.postRepository = postRepository;
         this.memberRepository = memberRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     public List<Enrollment> findMine(String username) {
@@ -62,6 +68,15 @@ public class EnrollmentService {
             enrollment.setCreatedAt(LocalDateTime.now());
             enrollmentRepository.save(enrollment);
             post.setAppliedCount(post.getAppliedCount() + 1);
+            eventPublisher.publishEvent(SeatMessage.from(post));
+            String writer = post.getAuthor().getUsername();
+            if (!writer.equals(username)) {
+                eventPublisher.publishEvent(new Notification(
+                        writer,
+                        member.getName() + "님이 '" + post.getTitle() + "'에 신청했습니다. ("
+                                + post.getAppliedCount() + "/" + post.getCapacity() + ")",
+                        post.getId()));
+            }
         }
         return postIds.size();
     }
@@ -77,5 +92,14 @@ public class EnrollmentService {
         Post post = enrollment.getPost();
         post.setAppliedCount(Math.max(0, post.getAppliedCount() - 1));
         enrollmentRepository.delete(enrollment);
+        eventPublisher.publishEvent(SeatMessage.from(post));
+        String writer = post.getAuthor().getUsername();
+        if (!writer.equals(username)) {
+            eventPublisher.publishEvent(new Notification(
+                    writer,
+                    enrollment.getMember().getName() + "님이 '" + post.getTitle()
+                            + "' 신청을 취소했습니다.",
+                    post.getId()));
+        }
     }
 }

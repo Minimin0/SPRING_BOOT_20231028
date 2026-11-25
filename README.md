@@ -1136,3 +1136,70 @@ src/main/resources/templates/
 신청 바구니와 확정된 신청 내역을 한 화면에서 확인하고 신청을 취소할 수 있다.
 
 ![11주차 신청 바구니와 신청 내역](docs/images/week11-enrollment-cart.jpg)
+
+# 자바웹프로그래밍(2) 12주차 - WebSocket 실시간 알림
+
+## 구현한 기능
+
+- WebSocket과 STOMP를 이용한 실시간 연결 상태 표시
+- 신청 확정·취소 시 목록, 상세, 바구니의 남은 자리 즉시 갱신
+- 모집글 작성자에게 신청·취소 알림 전송
+- 게시글 작성자에게 댓글 등록 알림 전송
+- 트랜잭션 커밋 후에만 메시지를 보내 롤백 시 유령 알림 방지
+- 로그인한 사용자별 `/user/queue/notifications` 개인 알림과 알림 배지
+
+## 추가한 구조
+
+```text
+src/main/java/com/example/demo/
+├── config/WebSocketConfig.java
+├── model/dto/
+│   ├── Notification.java
+│   └── SeatMessage.java
+└── model/service/RealtimeNotifier.java
+
+src/main/resources/static/js/
+├── realtime.js
+└── stomp.umd.min.js
+```
+
+## 실시간 메시지 주소
+
+| 주소 | 수신 대상 | 메시지 내용 |
+|---|---|---|
+| `/ws` | 모든 브라우저 | WebSocket/STOMP 연결 엔드포인트 |
+| `/topic/seats` | 구독 중인 모든 사용자 | 게시글 번호, 신청 인원, 정원, 남은 자리 |
+| `/user/queue/notifications` | 지정된 로그인 사용자 | 신청·취소·댓글 개인 알림 |
+
+## 실습하면서 정리한 것
+
+- WebSocket 연결은 한 번 맺은 뒤 서버와 브라우저가 양방향으로 메시지를 주고받는다.
+- STOMP의 `/topic`은 여러 구독자에게, `/user/queue`는 지정된 로그인 사용자에게 전달한다.
+- 신청 처리 중 바로 메시지를 보내면 이후 작업이 롤백돼도 화면 메시지는 되돌릴 수 없다.
+- 서비스는 `ApplicationEventPublisher`로 변경 사실만 발행하고, `RealtimeNotifier`가 `@TransactionalEventListener`로 커밋 성공 후 전송한다.
+- 댓글 알림도 커밋 후 전송되어야 하므로 댓글 작성 메서드를 트랜잭션으로 묶는다.
+- 본인이 쓴 모집글에 직접 신청하거나 댓글을 남긴 경우에는 본인 알림을 생략한다.
+
+## 검증 결과
+
+- `./mvnw test`: 29개 테스트 성공
+- 비로그인 사용자도 `/ws`에 연결되고 남은 자리 메시지를 받는지 확인
+- 신청 확정 시 새로고침 없이 신청 `0→1`, 남은 자리 `3→2` 갱신 확인
+- 신청 취소 시 신청 `1→0`, 남은 자리 `2→3` 복원 확인
+- 모집글 작성자에게만 신청·취소·댓글 알림이 표시되는지 확인
+- 마감 모집글이 섞인 다중 신청 실패 시 DB 전체 롤백 및 WebSocket 메시지 미전송 확인
+- 테스트용 게시글·댓글·신청·계정 정리 완료
+
+### 실습 결과
+
+다른 사용자가 신청을 확정하면 작성자 화면의 남은 자리와 진행 막대가 새로고침 없이 바뀌고 개인 알림이 표시된다.
+
+![12주차 실시간 신청과 남은 자리 갱신](docs/images/week12-realtime-enrollment.jpg)
+
+다른 사용자가 댓글을 등록하면 게시글 작성자에게 댓글 알림이 바로 도착한다.
+
+![12주차 실시간 댓글 알림](docs/images/week12-realtime-comment.jpg)
+
+신청을 취소하면 남은 자리가 즉시 복원되고 작성자에게 취소 알림이 표시된다.
+
+![12주차 실시간 신청 취소](docs/images/week12-realtime-cancel.jpg)

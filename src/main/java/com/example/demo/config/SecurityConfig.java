@@ -40,6 +40,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/hello").permitAll()
                         .requestMatchers("/board", "/board/{id:\\d+}").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
+                        .requestMatchers("/ws").permitAll()
                         .requestMatchers("/admin/**", "/api/admin/**").hasRole(Member.ROLE_ADMIN)
                         .requestMatchers("/testdb").hasAnyRole(Member.ROLE_ADMIN, Member.ROLE_MANAGER)
                         .anyRequest().authenticated())

@@ -19,7 +19,11 @@
                     <a th:href="@{/board}" class="small"><i class="bi-arrow-left me-1"></i>게시판으로</a>
                     <h1 class="mt-1"><i class="bi-basket me-2"></i>신청 바구니</h1>
                 </div>
-                <span><i class="bi-person-circle me-1"></i><strong sec:authentication="name">user</strong>님</span>
+                <div class="d-flex align-items-center gap-3">
+                    <span id="rt-status" class="rt-status">○ 실시간</span>
+                    <span id="noti-bell" sec:authorize="isAuthenticated()" class="noti-bell"><i class="bi-bell"></i><span id="noti-count" class="badge bg-danger" hidden>0</span></span>
+                    <span><i class="bi-person-circle me-1"></i><strong sec:authentication="name">user</strong>님</span>
+                </div>
             </div>
         </header>
 
@@ -46,7 +50,7 @@
                                         <a th:href="@{/board/{id}(id=${post.id})}" th:text="${post.title}" class="board-title">제목</a>
                                     </td>
                                     <td th:text="|${post.capacity}명|">5명</td>
-                                    <td><strong class="text-primary" th:text="${post.remaining}">5</strong></td>
+                                    <td><strong class="text-primary" th:attr="data-seat-post=${post.id}" data-field="remaining" th:text="${post.remaining}">5</strong></td>
                                     <td>
                                         <form th:action="@{/cart/{id}/remove(id=${post.id})}" method="post" class="m-0">
                                             <button type="submit" class="btn btn-link btn-sm text-danger p-0"><i class="bi-x-circle me-1"></i>빼기</button>
@@ -92,5 +96,8 @@
                 </div>
             </div>
         </main>
+        <div id="toast-area" class="toast-area"></div>
+        <script th:src="@{/js/stomp.umd.min.js}"></script>
+        <script th:src="@{/js/realtime.js}"></script>
     </body>
 </html>

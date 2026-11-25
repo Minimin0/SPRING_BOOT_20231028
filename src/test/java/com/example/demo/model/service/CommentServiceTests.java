@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.AuthorityUtils;
@@ -36,11 +37,15 @@ class CommentServiceTests {
     @Mock
     private PostService postService;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private CommentService commentService;
 
     @BeforeEach
     void setUp() {
-        commentService = new CommentService(commentRepository, memberRepository, postService);
+        commentService = new CommentService(
+                commentRepository, memberRepository, postService, eventPublisher);
     }
 
     @AfterEach
@@ -51,6 +56,9 @@ class CommentServiceTests {
     @Test
     void writesTrimmedCommentAsAuthenticatedMember() {
         Post post = new Post();
+        post.setId(1L);
+        post.setTitle("자바 스터디");
+        post.setAuthor(member("admin"));
         Member author = member("student1");
         when(postService.findById(1L)).thenReturn(post);
         when(memberRepository.findByUsername("student1")).thenReturn(Optional.of(author));
@@ -62,6 +70,7 @@ class CommentServiceTests {
         assertEquals("좋은 글입니다.", comment.getContent());
         assertEquals(post, comment.getPost());
         assertEquals(author, comment.getAuthor());
+        verify(eventPublisher).publishEvent(any(Object.class));
     }
 
     @Test
@@ -104,6 +113,7 @@ class CommentServiceTests {
     private Member member(String username) {
         Member member = new Member();
         member.setUsername(username);
+        member.setName(username);
         return member;
     }
 
